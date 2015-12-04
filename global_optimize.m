@@ -1,4 +1,8 @@
 function [ image_high_opt ] = global_optimize( image_high, image_low )
+% Enforce global contraints on the image
+% Input:  image_high - high-resolution image matrix
+%         image_low - low-resolution image matrix
+% Output: image_high_opt - high-resolution image matrix after optimization
 
 [height_high, width_high] = size(image_high);
 [height_low, width_low] = size(image_low);
