@@ -16,15 +16,12 @@ image_high = image(1:height_high, 1:width_high);
 image_low = zeros(height_low, width_low);
 for h = 1:height_low
     for w = 1:width_low
-        sum = 0;
-        for i = 1:scale_factor
-            for j = 1:scale_factor
-                hi = (h - 1) * scale_factor + i;
-                wj = (w - 1) * scale_factor + j;
-                sum = sum + image_high(hi, wj);
-            end
-        end
-        image_low(h, w) = sum / (scale_factor * scale_factor);
+        h_offset = (h - 1) * scale_factor;
+        w_offset = (w - 1) * scale_factor;
+        px_high = image_high(h_offset+1:h_offset+scale_factor,...
+            w_offset+1:w_offset+scale_factor);
+        px_low = mean(mean(px_high, 1), 2);
+        image_low(h, w) = px_low;
     end
 end
 
