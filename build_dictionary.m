@@ -7,7 +7,7 @@ function [ dict_high, dict_low ] = build_dictionary(...
 % Output: dict_high - high resolution dictionary
 %         dict_low - low resolution dictionary
 
-[idx, dict_low] = kmeans(patches_low', dict_size);
+[idx, dict_low] = kmeans(patches_low', dict_size, 'Display', 'iter', 'MaxIter', 500);
 dict_low = dict_low';
 
 dict_high = zeros(size(patches_high, 1), dict_size);
