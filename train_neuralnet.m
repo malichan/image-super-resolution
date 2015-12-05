@@ -22,10 +22,12 @@ for i = 1:num_instances
     ins_hidden = weights_in' * outs_input;
     outs_hidden = [1; sigmoid(ins_hidden)]; % sigmoid hidden units
     ins_output = weights_out' * outs_hidden;
-    outs_output = sigmoid(ins_output); % sigmoid output units
+    % outs_output = sigmoid(ins_output); % sigmoid output units
+    outs_output = identity(ins_output); % linear output units
 
     errs_output = targ - outs_output;
-    errs_output = sigmoid_gradient(ins_output) .* errs_output; % sigmoid output units
+    % errs_output = sigmoid_gradient(ins_output) .* errs_output; % sigmoid output units
+    errs_output = identity_gradient(ins_output) .* errs_output; % linear output units
     errs_hidden = weights_out * errs_output;
     errs_hidden = sigmoid_gradient(ins_hidden) .* errs_hidden(2:end,:); % sigmoid hidden units
 
