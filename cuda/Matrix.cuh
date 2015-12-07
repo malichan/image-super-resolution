@@ -68,6 +68,10 @@ public:
     static HostMatrix multiplyOnHost(const HostMatrix& matrixA, const HostMatrix& matrixB);
     static DeviceMatrix multiplyOnDevice(const DeviceMatrix& matrixA, const DeviceMatrix& matrixB);
 
+    static HostMatrix padOnHost(const HostMatrix& matrix, unsigned int height, unsigned int width,
+        unsigned int i, unsigned int j, float value);
+    static DeviceMatrix padOnDevice(const DeviceMatrix& matrix, unsigned int height, unsigned int width,
+        unsigned int i, unsigned int j, float value);
 };
 
 #include "Matrix.cut"

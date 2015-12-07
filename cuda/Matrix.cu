@@ -184,7 +184,7 @@ DeviceMatrix MatrixUtilities::multiplyOnDevice(const DeviceMatrix& matrixA, cons
     if (matrixA.width != matrixB.height) {
         throw std::invalid_argument("Invalid argument.");
     } else {
-        const unsigned int BLOCK_SIZE = 4;
+        const unsigned int BLOCK_SIZE = 32;
 
         DeviceMatrix matrixC(matrixA.height, matrixB.width);
         dim3 blockDim(BLOCK_SIZE, BLOCK_SIZE);
@@ -195,5 +195,57 @@ DeviceMatrix MatrixUtilities::multiplyOnDevice(const DeviceMatrix& matrixA, cons
             matrixC.height, matrixA.width, matrixC.width);
 
         return matrixC;
+    }
+}
+
+HostMatrix MatrixUtilities::padOnHost(const HostMatrix& matrix, unsigned int height, unsigned int width,
+    unsigned int i, unsigned int j, float value) {
+    if (height < matrix.height || width < matrix.width) {
+        throw std::invalid_argument("Invalid argument.");
+    } else {
+        HostMatrix matrixPadded(height, width);
+        unsigned int ii = i + matrix.height;
+        unsigned int jj = j + matrix.width;
+        for (unsigned int pi = 0; pi < height; ++pi) {
+            for (unsigned int pj = 0; pj < width; ++pj) {
+                if (pi >= i && pi < ii && pj >= j && pj < jj) {
+                    matrixPadded.setElement(pi, pj, matrix.getElement(pi - i, pj - j));
+                } else {
+                    matrixPadded.setElement(pi, pj, value);
+                }
+            }
+        }
+        return matrixPadded;
+    }
+}
+
+__global__
+void _pad(float* matrix_in, float* matrix_out, unsigned int m_in, unsigned int n_in,
+    unsigned int m_out, unsigned int n_out, unsigned int i, unsigned int j, float value) {
+    unsigned int global_i = threadIdx.y + blockIdx.y * blockDim.y;
+    unsigned int global_j = threadIdx.x + blockIdx.x * blockDim.x;
+
+    if (global_i < m_out && global_j < n_out) {
+        int global_i_in = global_i - i;
+        int global_j_in = global_j - j;
+        matrix_out[global_i * n_out + global_j] =
+            (global_i_in >= 0 && global_i_in < m_in && global_j_in >= 0 && global_j_in < n_in)?
+            matrix_in[global_i_in * n_in + global_j_in]: value;
+    }
+}
+
+DeviceMatrix MatrixUtilities::padOnDevice(const DeviceMatrix& matrix, unsigned int height, unsigned int width,
+    unsigned int i, unsigned int j, float value) {
+    if (height < matrix.height || width < matrix.width) {
+        throw std::invalid_argument("Invalid argument.");
+    } else {
+        const unsigned int BLOCK_SIZE = 32;
+
+        DeviceMatrix matrixPadded(height, width);
+        dim3 blockDim(BLOCK_SIZE, BLOCK_SIZE);
+        dim3 gridDim((width + BLOCK_SIZE - 1) / BLOCK_SIZE, (height + BLOCK_SIZE - 1) / BLOCK_SIZE);
+        _pad<<<gridDim, blockDim>>>(matrix.elements, matrixPadded.elements, matrix.height, matrix.width,
+            height, width, i, j, value);
+        return matrixPadded;
     }
 }
