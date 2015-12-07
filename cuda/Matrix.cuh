@@ -7,14 +7,11 @@ class Matrix {
     friend class MatrixUtilities;
 
 public:
+    const unsigned int height;
+    const unsigned int width;
+    
     virtual ~Matrix() {}
 
-    unsigned int getHeight() const {
-        return height;
-    }
-    unsigned int getWidth() const {
-        return width;
-    }
     float* getElements() const {
         return elements;
     }
@@ -23,10 +20,8 @@ public:
     virtual void setElement(unsigned int i, unsigned int j, float value) = 0;
 
 protected:
-    unsigned int height;
-    unsigned int width;
-    float* elements;
     bool onDevice;
+    float* elements;
 
     Matrix(unsigned int height, unsigned int width, bool onDevice):
         height(height), width(width), elements(0), onDevice(onDevice) {}

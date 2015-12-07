@@ -137,7 +137,8 @@ HostMatrix MatrixUtilities::multiplyOnHost(const HostMatrix& matrixA, const Host
 }
 
 __global__
-void _multiply(float* matrix_a, float* matrix_b, float* matrix_c, unsigned int m, unsigned int p, unsigned int n) {
+void _multiply(const float* matrix_a, const float* matrix_b, float* matrix_c,
+    unsigned int m, unsigned int p, unsigned int n) {
     __shared__ extern float shared_mem[];
     float* s_a = shared_mem;
     float* s_b = shared_mem + blockDim.x * blockDim.y;
@@ -220,7 +221,7 @@ HostMatrix MatrixUtilities::padOnHost(const HostMatrix& matrix, unsigned int hei
 }
 
 __global__
-void _pad(float* matrix_in, float* matrix_out, unsigned int m_in, unsigned int n_in,
+void _pad(const float* matrix_in, float* matrix_out, unsigned int m_in, unsigned int n_in,
     unsigned int m_out, unsigned int n_out, unsigned int i, unsigned int j, float value) {
     unsigned int global_i = threadIdx.y + blockIdx.y * blockDim.y;
     unsigned int global_j = threadIdx.x + blockIdx.x * blockDim.x;
