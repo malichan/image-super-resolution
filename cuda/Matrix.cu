@@ -1,17 +1,18 @@
 #include <cmath>
 #include <fstream>
+#include <iomanip>
 
 #include "Matrix.cuh"
 
-HostMatrix::HostMatrix(unsigned int height, unsigned int width): Matrix(height, width) {
+inline HostMatrix::HostMatrix(unsigned int height, unsigned int width): Matrix(height, width, false) {
     cudaMallocHost(&elements, height * width * sizeof(float));
 }
 
-HostMatrix::~HostMatrix() {
+inline HostMatrix::~HostMatrix() {
     cudaFreeHost(elements);
 }
 
-float HostMatrix::getElement(unsigned int i, unsigned int j) const {
+inline float HostMatrix::getElement(unsigned int i, unsigned int j) const {
     if (i < height && j < width) {
         return elements[i * width + j];
     } else {
@@ -19,15 +20,15 @@ float HostMatrix::getElement(unsigned int i, unsigned int j) const {
     }
 }
 
-DeviceMatrix::DeviceMatrix(unsigned int height, unsigned int width): Matrix(height, width) {
+inline DeviceMatrix::DeviceMatrix(unsigned int height, unsigned int width): Matrix(height, width, true) {
     cudaMalloc(&elements, height * width * sizeof(float));
 }
 
-DeviceMatrix::~DeviceMatrix() {
+inline DeviceMatrix::~DeviceMatrix() {
     cudaFree(elements);
 }
 
-float DeviceMatrix::getElement(unsigned int i, unsigned int j) const {
+inline float DeviceMatrix::getElement(unsigned int i, unsigned int j) const {
     if (i < height && j < width) {
         float elem = 0.0f;
         cudaMemcpy(&elem, &elements[i * width + j], sizeof(float), cudaMemcpyDeviceToHost);
@@ -46,22 +47,43 @@ HostMatrix MatrixUtilities::loadFromFile(const char* fileName) {
     fin >> height >> width;
 
     HostMatrix matrix(height, width);
-    for (unsigned int i = 0; i < height * width; ++i) {
-        fin >> matrix.elements[i];
+    for (unsigned int k = 0; k < height * width; ++k) {
+        fin >> matrix.elements[k];
     }
 
     fin.close();
     return matrix;
 }
 
-HostMatrix MatrixUtilities::copyToHost(const DeviceMatrix& matrix) {
+void MatrixUtilities::saveToFile(const HostMatrix& matrix, const char* fileName) {
+    std::ofstream fout;
+    fout.open(fileName);
+
+    fout.setf(std::ios::fixed, std::ios::floatfield);
+    fout.precision(6);
+    fout << matrix.height << " " << matrix.width << std::endl;
+    for (unsigned int i = 0; i < matrix.height; ++i) {
+        for (unsigned int j = 0; j < matrix.width; ++j) {
+            fout << matrix.getElement(i, j) << " ";
+        }
+        fout << std::endl;
+    }
+
+    fout.close();
+}
+
+HostMatrix MatrixUtilities::copyToHost(const Matrix& matrix) {
     HostMatrix copy_matrix(matrix.height, matrix.width);
-    cudaMemcpy(copy_matrix.elements, matrix.elements, matrix.height * matrix.width * sizeof(float), cudaMemcpyDeviceToHost);
+    size_t count = matrix.height * matrix.width * sizeof(float);
+    cudaMemcpyKind kind = matrix.onDevice? cudaMemcpyDeviceToHost: cudaMemcpyHostToHost;
+    cudaMemcpy(copy_matrix.elements, matrix.elements, count, kind);
     return copy_matrix;
 }
 
-DeviceMatrix MatrixUtilities::copyToDevice(const HostMatrix& matrix) {
+DeviceMatrix MatrixUtilities::copyToDevice(const Matrix& matrix) {
     DeviceMatrix copy_matrix(matrix.height, matrix.width);
-    cudaMemcpy(copy_matrix.elements, matrix.elements, matrix.height * matrix.width * sizeof(float), cudaMemcpyHostToDevice);
+    size_t count = matrix.height * matrix.width * sizeof(float);
+    cudaMemcpyKind kind = matrix.onDevice? cudaMemcpyDeviceToDevice: cudaMemcpyHostToDevice;
+    cudaMemcpy(copy_matrix.elements, matrix.elements, count, kind);
     return copy_matrix;
 }

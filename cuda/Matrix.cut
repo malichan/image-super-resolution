@@ -1,0 +1,32 @@
+#ifndef _MATRIX_CUT_
+#define _MATRIX_CUT_
+
+template <typename UnaryOperation>
+void MatrixUtilities::transformOnHost(HostMatrix& matrix, UnaryOperation op) {
+    for (unsigned int k = 0; k < matrix.height * matrix.width; ++k) {
+        matrix.elements[k] = op(matrix.elements[k]);
+    }
+}
+
+template <typename UnaryOperation>
+__global__
+void _transform(float* matrix, unsigned int m, unsigned int n, UnaryOperation op) {
+    unsigned int global_i = threadIdx.y + blockIdx.y * blockDim.y;
+    unsigned int global_j = threadIdx.x + blockIdx.x * blockDim.x;
+    
+    if (global_i < m && global_j < n) {
+        matrix[global_i * n + global_j] = op(matrix[global_i * n + global_j]);
+    }
+}
+
+template <typename UnaryOperation>
+void MatrixUtilities::transformOnDevice(DeviceMatrix& matrix, UnaryOperation op) {
+    const unsigned int BLOCK_SIZE = 32;
+
+    dim3 blockDim(BLOCK_SIZE, BLOCK_SIZE);
+    dim3 gridDim((matrix.width + BLOCK_SIZE - 1) / BLOCK_SIZE,
+        (matrix.height + BLOCK_SIZE - 1) / BLOCK_SIZE);
+    _transform<<<gridDim, blockDim>>>(matrix.elements, matrix.height, matrix.width, op);
+}
+
+#endif

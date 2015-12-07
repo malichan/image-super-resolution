@@ -25,8 +25,10 @@ protected:
     unsigned int height;
     unsigned int width;
     float* elements;
+    bool onDevice;
 
-    Matrix(unsigned int height, unsigned int width): height(height), width(width), elements(0) {}
+    Matrix(unsigned int height, unsigned int width, bool onDevice):
+        height(height), width(width), elements(0), onDevice(onDevice) {}
 };
 
 class HostMatrix : public Matrix {
@@ -48,9 +50,17 @@ public:
 class MatrixUtilities {
 public:
     static HostMatrix loadFromFile(const char* fileName);
+    static void saveToFile(const HostMatrix& matrix, const char* fileName);
 
-    static HostMatrix copyToHost(const DeviceMatrix& matrix);
-    static DeviceMatrix copyToDevice(const HostMatrix& matrix);
+    static HostMatrix copyToHost(const Matrix& matrix);
+    static DeviceMatrix copyToDevice(const Matrix& matrix);
+
+    template <typename UnaryOperation>
+    static void transformOnHost(HostMatrix& matrix, UnaryOperation op);
+    template <typename UnaryOperation>
+    static void transformOnDevice(DeviceMatrix& matrix, UnaryOperation op);
 };
+
+#include "Matrix.cut"
 
 #endif
