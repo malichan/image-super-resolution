@@ -13,7 +13,7 @@ __global__
 void _transform(float* matrix, unsigned int m, unsigned int n, UnaryOperation op) {
     unsigned int global_i = threadIdx.y + blockIdx.y * blockDim.y;
     unsigned int global_j = threadIdx.x + blockIdx.x * blockDim.x;
-    
+
     if (global_i < m && global_j < n) {
         matrix[global_i * n + global_j] = op(matrix[global_i * n + global_j]);
     }

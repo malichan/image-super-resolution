@@ -20,6 +20,7 @@ public:
     }
 
     virtual float getElement(unsigned int i, unsigned int j) const = 0;
+    virtual void setElement(unsigned int i, unsigned int j, float value) = 0;
 
 protected:
     unsigned int height;
@@ -37,6 +38,7 @@ public:
     virtual ~HostMatrix();
 
     virtual float getElement(unsigned int i, unsigned int j) const;
+    virtual void setElement(unsigned int i, unsigned int j, float value);
 };
 
 class DeviceMatrix : public Matrix {
@@ -45,12 +47,15 @@ public:
     virtual ~DeviceMatrix();
 
     virtual float getElement(unsigned int i, unsigned int j) const;
+    virtual void setElement(unsigned int i, unsigned int j, float value);
 };
 
 class MatrixUtilities {
 public:
     static HostMatrix loadFromFile(const char* fileName);
     static void saveToFile(const HostMatrix& matrix, const char* fileName);
+
+    static bool compare(const HostMatrix& matrixA, const HostMatrix& matrixB, float epsilon);
 
     static HostMatrix copyToHost(const Matrix& matrix);
     static DeviceMatrix copyToDevice(const Matrix& matrix);
@@ -59,6 +64,10 @@ public:
     static void transformOnHost(HostMatrix& matrix, UnaryOperation op);
     template <typename UnaryOperation>
     static void transformOnDevice(DeviceMatrix& matrix, UnaryOperation op);
+
+    static HostMatrix multiplyOnHost(const HostMatrix& matrixA, const HostMatrix& matrixB);
+    static DeviceMatrix multiplyOnDevice(const DeviceMatrix& matrixA, const DeviceMatrix& matrixB);
+
 };
 
 #include "Matrix.cut"
