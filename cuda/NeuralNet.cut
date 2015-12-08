@@ -1,0 +1,50 @@
+#ifndef _NEURALNET_CUT_
+#define _NEURALNET_CUT_
+
+template <>
+void NeuralNet<DeviceMatrix>::loadWeights(const char* weightsInFileName, const char* weightsOutFileName) {
+    weightsIn = MatrixUtilities::copyToDevice(MatrixUtilities::loadFromFile(weightsInFileName));
+    weightsOut = MatrixUtilities::copyToDevice(MatrixUtilities::loadFromFile(weightsOutFileName));
+    initialized = true;
+}
+
+template <>
+DeviceMatrix NeuralNet<DeviceMatrix>::predict(const DeviceMatrix& instances) {
+    if (!initialized) {
+        throw std::invalid_argument("Invalid argument.");
+    } else {
+        DeviceMatrix hiddenIn = MatrixUtilities::padOnDevice(instances,
+            instances.getHeight() + 1, instances.getWidth(), 1, 0, 1.0f);
+        DeviceMatrix hiddenOut = MatrixUtilities::multiplyOnDevice(weightsIn, hiddenIn);
+        MatrixUtilities::transformOnDevice(hiddenOut, Sigmoid());
+        DeviceMatrix outputIn = MatrixUtilities::padOnDevice(hiddenOut,
+            hiddenOut.getHeight() + 1, hiddenOut.getWidth(), 1, 0, 1.0f);
+        DeviceMatrix outputOut = MatrixUtilities::multiplyOnDevice(weightsOut, outputIn);
+        return outputOut;
+    }
+}
+
+template <>
+void NeuralNet<HostMatrix>::loadWeights(const char* weightsInFileName, const char* weightsOutFileName) {
+    weightsIn = MatrixUtilities::loadFromFile(weightsInFileName);
+    weightsOut = MatrixUtilities::loadFromFile(weightsOutFileName);
+    initialized = true;
+}
+
+template <>
+HostMatrix NeuralNet<HostMatrix>::predict(const HostMatrix& instances) {
+    if (!initialized) {
+        throw std::invalid_argument("Invalid argument.");
+    } else {
+        HostMatrix hiddenIn = MatrixUtilities::padOnHost(instances,
+            instances.getHeight() + 1, instances.getWidth(), 1, 0, 1.0f);
+        HostMatrix hiddenOut = MatrixUtilities::multiplyOnHost(weightsIn, hiddenIn);
+        MatrixUtilities::transformOnHost(hiddenOut, Sigmoid());
+        HostMatrix outputIn = MatrixUtilities::padOnHost(hiddenOut,
+            hiddenOut.getHeight() + 1, hiddenOut.getWidth(), 1, 0, 1.0f);
+        HostMatrix outputOut = MatrixUtilities::multiplyOnHost(weightsOut, outputIn);
+        return outputOut;
+    }
+}
+
+#endif
