@@ -1,23 +1,24 @@
-#include <cmath>
-#include <fstream>
-#include <iomanip>
-#include <stdexcept>
-
 #include "Matrix.cuh"
 
+class HostMatrixDeleter {
+public:
+    void operator()(float* ptr) const {
+        cudaFreeHost(ptr);
+    }
+};
+
 inline HostMatrix::HostMatrix(unsigned int height, unsigned int width): Matrix(height, width, false) {
-    cudaMallocHost(&elements, height * width * sizeof(float));
+    float* rawElements = 0;
+    cudaMallocHost(&rawElements, height * width * sizeof(float));
+    elements = std::shared_ptr<float>(rawElements, HostMatrixDeleter());
 }
 
-inline HostMatrix::~HostMatrix() {
-    cudaFreeHost(elements);
-}
 
 inline float HostMatrix::getElement(unsigned int i, unsigned int j) const {
     if (i >= height || j >= width) {
         throw std::invalid_argument("Invalid argument.");
     } else {
-        return elements[i * width + j];
+        return (elements.get())[i * width + j];
     }
 }
 
@@ -25,16 +26,21 @@ inline void HostMatrix::setElement(unsigned int i, unsigned int j, float value) 
     if (i >= height || j >= width) {
         throw std::invalid_argument("Invalid argument.");
     } else {
-        elements[i * width + j] = value;
+        (elements.get())[i * width + j] = value;
     }
 }
 
-inline DeviceMatrix::DeviceMatrix(unsigned int height, unsigned int width): Matrix(height, width, true) {
-    cudaMalloc(&elements, height * width * sizeof(float));
-}
+class DeviceMatrixDeleter {
+public:
+    void operator()(float* ptr) const {
+        cudaFree(ptr);
+    }
+};
 
-inline DeviceMatrix::~DeviceMatrix() {
-    cudaFree(elements);
+inline DeviceMatrix::DeviceMatrix(unsigned int height, unsigned int width): Matrix(height, width, true) {
+    float* rawElements = 0;
+    cudaMalloc(&rawElements, height * width * sizeof(float));
+    elements = std::shared_ptr<float>(rawElements, DeviceMatrixDeleter());
 }
 
 inline float DeviceMatrix::getElement(unsigned int i, unsigned int j) const {
@@ -42,7 +48,7 @@ inline float DeviceMatrix::getElement(unsigned int i, unsigned int j) const {
         throw std::invalid_argument("Invalid argument.");
     } else {
         float value = 0.0f;
-        cudaMemcpy(&value, &elements[i * width + j], sizeof(float), cudaMemcpyDeviceToHost);
+        cudaMemcpy(&value, elements.get() + i * width + j, sizeof(float), cudaMemcpyDeviceToHost);
         return value;
     }
 }
@@ -51,7 +57,7 @@ inline void DeviceMatrix::setElement(unsigned int i, unsigned int j, float value
     if (i >= height || j >= width) {
         throw std::invalid_argument("Invalid argument.");
     } else {
-        cudaMemcpy(&elements[i * width + j], &value, sizeof(float), cudaMemcpyHostToDevice);
+        cudaMemcpy(elements.get() + i * width + j, &value, sizeof(float), cudaMemcpyHostToDevice);
     }
 }
 
@@ -64,8 +70,12 @@ HostMatrix MatrixUtilities::loadFromFile(const char* fileName) {
     fin >> height >> width;
 
     HostMatrix matrix(height, width);
-    for (unsigned int k = 0; k < height * width; ++k) {
-        fin >> matrix.elements[k];
+    for (unsigned int i = 0; i < height; ++i) {
+        for (unsigned int j = 0; j < width; ++j) {
+            float value = 0.0f;
+            fin >> value;
+            matrix.setElement(i, j, value);
+        }
     }
 
     fin.close();
@@ -78,9 +88,9 @@ void MatrixUtilities::saveToFile(const HostMatrix& matrix, const char* fileName)
 
     fout.setf(std::ios::fixed, std::ios::floatfield);
     fout.precision(6);
-    fout << matrix.height << " " << matrix.width << std::endl;
-    for (unsigned int i = 0; i < matrix.height; ++i) {
-        for (unsigned int j = 0; j < matrix.width; ++j) {
+    fout << matrix.getHeight() << " " << matrix.getWidth() << std::endl;
+    for (unsigned int i = 0; i < matrix.getHeight(); ++i) {
+        for (unsigned int j = 0; j < matrix.getWidth(); ++j) {
             fout << matrix.getElement(i, j) << " ";
         }
         fout << std::endl;
@@ -90,12 +100,14 @@ void MatrixUtilities::saveToFile(const HostMatrix& matrix, const char* fileName)
 }
 
 bool MatrixUtilities::compare(const HostMatrix& matrixA, const HostMatrix& matrixB, float epsilon) {
-    if (matrixA.height != matrixB.height || matrixA.width != matrixB.width) {
+    if (matrixA.getHeight() != matrixB.getHeight() || matrixA.getWidth() != matrixB.getWidth()) {
         return false;
     } else {
-        for (unsigned int k = 0; k < matrixA.height * matrixA.width; ++k) {
-            if (fabs(matrixA.elements[k] - matrixB.elements[k]) > epsilon) {
-                return false;
+        for (unsigned int i = 0; i < matrixA.getHeight(); ++i) {
+            for (unsigned int j = 0; j < matrixA.getWidth(); ++j) {
+                if (fabs(matrixA.getElement(i, j) - matrixB.getElement(i, j)) > epsilon) {
+                    return false;
+                }
             }
         }
         return true;
@@ -103,30 +115,30 @@ bool MatrixUtilities::compare(const HostMatrix& matrixA, const HostMatrix& matri
 }
 
 HostMatrix MatrixUtilities::copyToHost(const Matrix& matrix) {
-    HostMatrix matrixCopy(matrix.height, matrix.width);
-    size_t count = matrix.height * matrix.width * sizeof(float);
-    cudaMemcpyKind kind = matrix.onDevice? cudaMemcpyDeviceToHost: cudaMemcpyHostToHost;
-    cudaMemcpy(matrixCopy.elements, matrix.elements, count, kind);
+    HostMatrix matrixCopy(matrix.getHeight(), matrix.getWidth());
+    size_t count = matrix.getHeight() * matrix.getWidth() * sizeof(float);
+    cudaMemcpyKind kind = matrix.isOnDevice()? cudaMemcpyDeviceToHost: cudaMemcpyHostToHost;
+    cudaMemcpy(matrixCopy.getElements(), matrix.getElements(), count, kind);
     return matrixCopy;
 }
 
 DeviceMatrix MatrixUtilities::copyToDevice(const Matrix& matrix) {
-    DeviceMatrix matrixCopy(matrix.height, matrix.width);
-    size_t count = matrix.height * matrix.width * sizeof(float);
-    cudaMemcpyKind kind = matrix.onDevice? cudaMemcpyDeviceToDevice: cudaMemcpyHostToDevice;
-    cudaMemcpy(matrixCopy.elements, matrix.elements, count, kind);
+    DeviceMatrix matrixCopy(matrix.getHeight(), matrix.getWidth());
+    size_t count = matrix.getHeight() * matrix.getWidth() * sizeof(float);
+    cudaMemcpyKind kind = matrix.isOnDevice()? cudaMemcpyDeviceToDevice: cudaMemcpyHostToDevice;
+    cudaMemcpy(matrixCopy.getElements(), matrix.getElements(), count, kind);
     return matrixCopy;
 }
 
 HostMatrix MatrixUtilities::multiplyOnHost(const HostMatrix& matrixA, const HostMatrix& matrixB) {
-    if (matrixA.width != matrixB.height) {
+    if (matrixA.getWidth() != matrixB.getHeight()) {
         throw std::invalid_argument("Invalid argument.");
     } else {
-        HostMatrix matrixC(matrixA.height, matrixB.width);
-        for (unsigned int i = 0; i < matrixC.height; ++i) {
-            for (unsigned int j = 0; j < matrixC.width; ++j) {
+        HostMatrix matrixC(matrixA.getHeight(), matrixB.getWidth());
+        for (unsigned int i = 0; i < matrixC.getHeight(); ++i) {
+            for (unsigned int j = 0; j < matrixC.getWidth(); ++j) {
                 float value = 0.0f;
-                for (unsigned int k = 0; k < matrixA.width; ++k) {
+                for (unsigned int k = 0; k < matrixA.getWidth(); ++k) {
                     value += matrixA.getElement(i, k) * matrixB.getElement(k, j);
                 }
                 matrixC.setElement(i, j, value);
@@ -182,18 +194,18 @@ void _multiply(const float* matrix_a, const float* matrix_b, float* matrix_c,
 }
 
 DeviceMatrix MatrixUtilities::multiplyOnDevice(const DeviceMatrix& matrixA, const DeviceMatrix& matrixB) {
-    if (matrixA.width != matrixB.height) {
+    if (matrixA.getWidth() != matrixB.getHeight()) {
         throw std::invalid_argument("Invalid argument.");
     } else {
         const unsigned int BLOCK_SIZE = 32;
 
-        DeviceMatrix matrixC(matrixA.height, matrixB.width);
+        DeviceMatrix matrixC(matrixA.getHeight(), matrixB.getWidth());
         dim3 blockDim(BLOCK_SIZE, BLOCK_SIZE);
-        dim3 gridDim((matrixC.width + BLOCK_SIZE - 1) / BLOCK_SIZE,
-            (matrixC.height + BLOCK_SIZE - 1) / BLOCK_SIZE);
+        dim3 gridDim((matrixC.getWidth() + BLOCK_SIZE - 1) / BLOCK_SIZE,
+            (matrixC.getHeight() + BLOCK_SIZE - 1) / BLOCK_SIZE);
         unsigned int sharedMem = BLOCK_SIZE * BLOCK_SIZE * sizeof(float) * 2;
-        _multiply<<<gridDim, blockDim, sharedMem>>>(matrixA.elements, matrixB.elements, matrixC.elements,
-            matrixC.height, matrixA.width, matrixC.width);
+        _multiply<<<gridDim, blockDim, sharedMem>>>(matrixA.getElements(), matrixB.getElements(), matrixC.getElements(),
+            matrixC.getHeight(), matrixA.getWidth(), matrixC.getWidth());
 
         return matrixC;
     }
@@ -201,12 +213,12 @@ DeviceMatrix MatrixUtilities::multiplyOnDevice(const DeviceMatrix& matrixA, cons
 
 HostMatrix MatrixUtilities::padOnHost(const HostMatrix& matrix, unsigned int height, unsigned int width,
     unsigned int i, unsigned int j, float value) {
-    if (height < matrix.height || width < matrix.width) {
+    if (height < matrix.getHeight() || width < matrix.getWidth()) {
         throw std::invalid_argument("Invalid argument.");
     } else {
         HostMatrix matrixPadded(height, width);
-        unsigned int ii = i + matrix.height;
-        unsigned int jj = j + matrix.width;
+        unsigned int ii = i + matrix.getHeight();
+        unsigned int jj = j + matrix.getWidth();
         for (unsigned int pi = 0; pi < height; ++pi) {
             for (unsigned int pj = 0; pj < width; ++pj) {
                 if (pi >= i && pi < ii && pj >= j && pj < jj) {
@@ -237,7 +249,7 @@ void _pad(const float* matrix_in, float* matrix_out, unsigned int m_in, unsigned
 
 DeviceMatrix MatrixUtilities::padOnDevice(const DeviceMatrix& matrix, unsigned int height, unsigned int width,
     unsigned int i, unsigned int j, float value) {
-    if (height < matrix.height || width < matrix.width) {
+    if (height < matrix.getHeight() || width < matrix.getWidth()) {
         throw std::invalid_argument("Invalid argument.");
     } else {
         const unsigned int BLOCK_SIZE = 32;
@@ -245,8 +257,8 @@ DeviceMatrix MatrixUtilities::padOnDevice(const DeviceMatrix& matrix, unsigned i
         DeviceMatrix matrixPadded(height, width);
         dim3 blockDim(BLOCK_SIZE, BLOCK_SIZE);
         dim3 gridDim((width + BLOCK_SIZE - 1) / BLOCK_SIZE, (height + BLOCK_SIZE - 1) / BLOCK_SIZE);
-        _pad<<<gridDim, blockDim>>>(matrix.elements, matrixPadded.elements, matrix.height, matrix.width,
-            height, width, i, j, value);
+        _pad<<<gridDim, blockDim>>>(matrix.getElements(), matrixPadded.getElements(),
+            matrix.getHeight(), matrix.getWidth(), height, width, i, j, value);
         return matrixPadded;
     }
 }
