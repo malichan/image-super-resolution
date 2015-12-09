@@ -3,7 +3,9 @@
 class HostMatrixDeleter {
 public:
     void operator()(float* ptr) const {
-        cudaFreeHost(ptr);
+        if (ptr) {
+            cudaFreeHost(ptr);
+        }
     }
 };
 
@@ -33,7 +35,9 @@ void HostMatrix::setElement(unsigned int i, unsigned int j, float value) {
 class DeviceMatrixDeleter {
 public:
     void operator()(float* ptr) const {
-        cudaFree(ptr);
+        if (ptr) {
+            cudaFree(ptr);
+        }
     }
 };
 
