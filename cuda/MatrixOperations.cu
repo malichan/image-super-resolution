@@ -247,3 +247,60 @@ DeviceMatrix MatrixOperations<DeviceMatrix>::concatenateVertical(
         return matrixConcat;
     }
 }
+
+template <>
+HostMatrix MatrixOperations<HostMatrix>::sumColumns(const HostMatrix& matrix) {
+    HostMatrix vector(1, matrix.getWidth());
+    for (unsigned int j = 0; j < matrix.getWidth(); ++j) {
+        float value = 0.0f;
+        for (unsigned int i = 0; i < matrix.getHeight(); ++i) {
+            value += matrix.getElement(i, j);
+        }
+        vector.setElement(0, j, value);
+    }
+    return vector;
+}
+
+__global__
+void _sumColumns(const float* matrix, float* vector, unsigned int m, unsigned int n) {
+    __shared__ extern float shared_mem[];
+
+    unsigned int local_i = threadIdx.y;
+    unsigned int local_j = threadIdx.x;
+    unsigned int global_j = threadIdx.x + blockIdx.x * blockDim.x;
+    unsigned int offset_i = 0;
+    unsigned int step_i = blockDim.y;
+
+    shared_mem[local_i * blockDim.x + local_j] = 0.0f;
+    while (offset_i < m) {
+        shared_mem[local_i * blockDim.x + local_j] += (local_i + offset_i < m && global_j < n)?
+            matrix[(local_i + offset_i) * n + global_j]: 0.0f;
+        offset_i += step_i;
+    }
+    __syncthreads();
+
+    for (step_i >>= 1; step_i > 0; step_i >>= 1) {
+        if (local_i < step_i) {
+            shared_mem[local_i * blockDim.x + local_j] +=
+                shared_mem[(local_i + step_i) * blockDim.x + local_j];
+        }
+        __syncthreads();
+    }
+
+    if (local_i == 0 && global_j < n) {
+        vector[global_j] = shared_mem[local_j];
+    }
+}
+
+template <>
+DeviceMatrix MatrixOperations<DeviceMatrix>::sumColumns(const DeviceMatrix& matrix) {
+    const unsigned int BLOCK_SIZE = 32;
+
+    DeviceMatrix vector(1, matrix.getWidth());
+    dim3 blockDim(BLOCK_SIZE, BLOCK_SIZE);
+    dim3 gridDim((matrix.getWidth() + BLOCK_SIZE - 1) / BLOCK_SIZE, 1);
+    unsigned int sharedMem = BLOCK_SIZE * BLOCK_SIZE * sizeof(float);
+    _sumColumns<<<gridDim, blockDim, sharedMem>>>(matrix.getElements(), vector.getElements(),
+        matrix.getHeight(), matrix.getWidth());
+    return vector;
+}
