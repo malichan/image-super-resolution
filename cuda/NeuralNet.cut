@@ -18,13 +18,13 @@ MatrixType NeuralNet<MatrixType>::predict(const MatrixType& instances) {
 
         rowVec = MatrixType(1, instances.getWidth());
         MatrixOperations<MatrixType>::fill(rowVec, 1.0f);
-        inMat = MatrixOperations<MatrixType>::concatenateVertical(rowVec, instances);
+        inMat = MatrixOperations<MatrixType>::concatenateRows(rowVec, instances);
         outMat = MatrixOperations<MatrixType>::multiply(weightsIn, inMat);
         MatrixOperations<MatrixType>::transform(outMat, Sigmoid());
 
         rowVec = MatrixType(1, outMat.getWidth());
         MatrixOperations<MatrixType>::fill(rowVec, 1.0f);
-        inMat = MatrixOperations<MatrixType>::concatenateVertical(rowVec, outMat);
+        inMat = MatrixOperations<MatrixType>::concatenateRows(rowVec, outMat);
         outMat = MatrixOperations<MatrixType>::multiply(weightsOut, inMat);
         return outMat;
     }

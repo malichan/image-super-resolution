@@ -18,7 +18,7 @@ public:
 
     static MatrixType transpose(const MatrixType& matrix);
 
-    static MatrixType concatenateVertical(const MatrixType& matrixUpper, const MatrixType& matrixLower);
+    static MatrixType concatenateRows(const MatrixType& matrixUpper, const MatrixType& matrixLower);
 
     static MatrixType sumColumns(const MatrixType& matrix);
 };

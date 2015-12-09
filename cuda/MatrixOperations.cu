@@ -194,7 +194,7 @@ DeviceMatrix MatrixOperations<DeviceMatrix>::transpose(const DeviceMatrix& matri
 }
 
 template <>
-HostMatrix MatrixOperations<HostMatrix>::concatenateVertical(
+HostMatrix MatrixOperations<HostMatrix>::concatenateRows(
     const HostMatrix& matrixUpper, const HostMatrix& matrixLower) {
     if (matrixUpper.getWidth() != matrixLower.getWidth()) {
         throw std::invalid_argument("Invalid argument.");
@@ -216,7 +216,7 @@ HostMatrix MatrixOperations<HostMatrix>::concatenateVertical(
 }
 
 __global__
-void _concatenateVertical(const float* matrix_upper, const float* matrix_lower, float* matrix_out,
+void _concatenateRows(const float* matrix_upper, const float* matrix_lower, float* matrix_out,
     unsigned int m_upper, unsigned int m_lower, unsigned int n) {
     unsigned int global_i = threadIdx.y + blockIdx.y * blockDim.y;
     unsigned int global_j = threadIdx.x + blockIdx.x * blockDim.x;
@@ -231,7 +231,7 @@ void _concatenateVertical(const float* matrix_upper, const float* matrix_lower, 
 }
 
 template <>
-DeviceMatrix MatrixOperations<DeviceMatrix>::concatenateVertical(
+DeviceMatrix MatrixOperations<DeviceMatrix>::concatenateRows(
     const DeviceMatrix& matrixUpper, const DeviceMatrix& matrixLower) {
     if (matrixUpper.getWidth() != matrixLower.getWidth()) {
         throw std::invalid_argument("Invalid argument.");
@@ -242,7 +242,7 @@ DeviceMatrix MatrixOperations<DeviceMatrix>::concatenateVertical(
         dim3 blockDim(BLOCK_SIZE, BLOCK_SIZE);
         dim3 gridDim((matrixConcat.getWidth() + BLOCK_SIZE - 1) / BLOCK_SIZE,
             (matrixConcat.getHeight() + BLOCK_SIZE - 1) / BLOCK_SIZE);
-        _concatenateVertical<<<gridDim, blockDim>>>(matrixUpper.getElements(), matrixLower.getElements(),
+        _concatenateRows<<<gridDim, blockDim>>>(matrixUpper.getElements(), matrixLower.getElements(),
             matrixConcat.getElements(), matrixUpper.getHeight(), matrixLower.getHeight(), matrixConcat.getWidth());
         return matrixConcat;
     }
