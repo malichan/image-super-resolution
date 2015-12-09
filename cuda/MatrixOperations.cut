@@ -1,8 +1,9 @@
-#ifndef _MATRIX_CUT_
-#define _MATRIX_CUT_
+#ifndef _MATRIXOPERATIONS_CUT_
+#define _MATRIXOPERATIONS_CUT_
 
+template <>
 template <typename UnaryOperation>
-void MatrixUtilities::transformOnHost(HostMatrix& matrix, UnaryOperation op) {
+void MatrixOperations<HostMatrix>::transform(HostMatrix& matrix, UnaryOperation op) {
     for (unsigned int i = 0; i < matrix.getHeight(); ++i) {
         for (unsigned int j = 0; j < matrix.getWidth(); ++j) {
             matrix.setElement(i, j, op(matrix.getElement(i, j)));
@@ -21,8 +22,9 @@ void _transform(float* matrix, unsigned int m, unsigned int n, UnaryOperation op
     }
 }
 
+template <>
 template <typename UnaryOperation>
-void MatrixUtilities::transformOnDevice(DeviceMatrix& matrix, UnaryOperation op) {
+void MatrixOperations<DeviceMatrix>::transform(DeviceMatrix& matrix, UnaryOperation op) {
     const unsigned int BLOCK_SIZE = 32;
 
     dim3 blockDim(BLOCK_SIZE, BLOCK_SIZE);
