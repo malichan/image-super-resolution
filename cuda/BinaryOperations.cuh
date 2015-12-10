@@ -19,4 +19,12 @@ public:
     }
 };
 
+class SquareDiff {
+public:
+    __host__ __device__
+    float operator()(float inA, float inB) const {
+        return (inA - inB) * (inA - inB);
+    }
+};
+
 #endif

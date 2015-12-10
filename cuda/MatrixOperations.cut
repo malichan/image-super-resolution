@@ -124,9 +124,9 @@ __global__
 void _combineInnerProduct(const float* matrix_a, const float* matrix_b, float* matrix_c,
     unsigned int m, unsigned int p, unsigned int n,
     BinaryOperation1 op_a, BinaryOperation2 op_b, UnaryOperation op_c, float identity) {
-    __shared__ extern float shared_mem[];
-    float* s_a = shared_mem;
-    float* s_b = shared_mem + blockDim.x * blockDim.y;
+    __shared__ extern float shared_mem_cip[];
+    float* s_a = shared_mem_cip;
+    float* s_b = shared_mem_cip + blockDim.x * blockDim.y;
 
     unsigned int local_i = threadIdx.y;
     unsigned int local_j = threadIdx.x;
@@ -213,7 +213,8 @@ template <typename BinaryOperation, typename UnaryOperation>
 __global__
 void _reduceColumns(const float* matrix, float* vector, unsigned int m, unsigned int n,
     BinaryOperation op_a, UnaryOperation op_b, float identity) {
-    __shared__ extern float shared_mem[];
+    __shared__ extern float shared_mem_rc[];
+    float* s = shared_mem_rc;
 
     unsigned int local_i = threadIdx.y;
     unsigned int local_j = threadIdx.x;
@@ -221,9 +222,9 @@ void _reduceColumns(const float* matrix, float* vector, unsigned int m, unsigned
     unsigned int offset_i = 0;
     unsigned int step_i = blockDim.y;
 
-    shared_mem[local_i * blockDim.x + local_j] = identity;
+    s[local_i * blockDim.x + local_j] = identity;
     while (offset_i < m) {
-        shared_mem[local_i * blockDim.x + local_j] = op_a(shared_mem[local_i * blockDim.x + local_j],
+        s[local_i * blockDim.x + local_j] = op_a(s[local_i * blockDim.x + local_j],
             (local_i + offset_i < m && global_j < n)?
             matrix[(local_i + offset_i) * n + global_j]: identity);
         offset_i += step_i;
@@ -232,14 +233,14 @@ void _reduceColumns(const float* matrix, float* vector, unsigned int m, unsigned
 
     for (step_i >>= 1; step_i > 0; step_i >>= 1) {
         if (local_i < step_i) {
-            shared_mem[local_i * blockDim.x + local_j] = op_a(shared_mem[local_i * blockDim.x + local_j],
-                shared_mem[(local_i + step_i) * blockDim.x + local_j]);
+            s[local_i * blockDim.x + local_j] = op_a(s[local_i * blockDim.x + local_j],
+                s[(local_i + step_i) * blockDim.x + local_j]);
         }
         __syncthreads();
     }
 
     if (local_i == 0 && global_j < n) {
-        vector[global_j] = op_b(shared_mem[local_j]);
+        vector[global_j] = op_b(s[local_j]);
     }
 }
 
@@ -261,6 +262,77 @@ DeviceMatrix MatrixOperations<DeviceMatrix>::reduceColumns(const DeviceMatrix& m
 template <typename MatrixType>
 MatrixType MatrixOperations<MatrixType>::sumColumns(const MatrixType& matrix) {
     return reduceColumns(matrix, Add(), Identity(), 0.0f);
+}
+
+template <>
+template <typename BinaryIndexedOperation>
+HostMatrix MatrixOperations<HostMatrix>::reduceColumnsIndexed(const HostMatrix& matrix,
+    BinaryIndexedOperation op, IndexedValue identity) {
+    HostMatrix vector(1, matrix.getWidth());
+    for (unsigned int j = 0; j < matrix.getWidth(); ++j) {
+        IndexedValue value = identity;
+        for (unsigned int i = 0; i < matrix.getHeight(); ++i) {
+            value = op(value, IndexedValue(matrix.getElement(i, j), i));
+        }
+        vector.setElement(0, j, (float)value.index);
+    }
+    return vector;
+}
+
+template <typename BinaryIndexedOperation>
+__global__
+void _reduceColumnsIndexed(const float* matrix, float* vector, unsigned int m, unsigned int n,
+    BinaryIndexedOperation op, IndexedValue identity) {
+    __shared__ extern IndexedValue shared_mem_rci[];
+    IndexedValue* s = shared_mem_rci;
+
+    unsigned int local_i = threadIdx.y;
+    unsigned int local_j = threadIdx.x;
+    unsigned int global_j = threadIdx.x + blockIdx.x * blockDim.x;
+    unsigned int offset_i = 0;
+    unsigned int step_i = blockDim.y;
+
+    s[local_i * blockDim.x + local_j] = identity;
+    while (offset_i < m) {
+        s[local_i * blockDim.x + local_j] = op(s[local_i * blockDim.x + local_j],
+            (local_i + offset_i < m && global_j < n)?
+            IndexedValue(matrix[(local_i + offset_i) * n + global_j], local_i + offset_i): identity);
+        offset_i += step_i;
+    }
+    __syncthreads();
+
+    for (step_i >>= 1; step_i > 0; step_i >>= 1) {
+        if (local_i < step_i) {
+            s[local_i * blockDim.x + local_j] = op(s[local_i * blockDim.x + local_j],
+                s[(local_i + step_i) * blockDim.x + local_j]);
+        }
+        __syncthreads();
+    }
+
+    if (local_i == 0 && global_j < n) {
+        vector[global_j] = (float)s[local_j].index;
+    }
+}
+
+template <>
+template <typename BinaryIndexedOperation>
+DeviceMatrix MatrixOperations<DeviceMatrix>::reduceColumnsIndexed(const DeviceMatrix& matrix,
+    BinaryIndexedOperation op, IndexedValue identity) {
+    const unsigned int BLOCK_SIZE = 32;
+
+    DeviceMatrix vector(1, matrix.getWidth());
+    dim3 blockDim(BLOCK_SIZE, BLOCK_SIZE);
+    dim3 gridDim((matrix.getWidth() + BLOCK_SIZE - 1) / BLOCK_SIZE, 1);
+    unsigned int sharedMem = BLOCK_SIZE * BLOCK_SIZE * sizeof(IndexedValue);
+    _reduceColumnsIndexed<<<gridDim, blockDim, sharedMem>>>(matrix.getElements(), vector.getElements(),
+        matrix.getHeight(), matrix.getWidth(), op, identity);
+    return vector;
+}
+
+template <typename MatrixType>
+MatrixType MatrixOperations<MatrixType>::minColumnsIndexed(const MatrixType& matrix) {
+    return reduceColumnsIndexed(matrix, MinIndexed(),
+        IndexedValue(std::numeric_limits<float>::max(), std::numeric_limits<unsigned int>::max()));
 }
 
 #endif

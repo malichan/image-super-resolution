@@ -4,6 +4,7 @@
 #include "Matrix.cuh"
 #include "UnaryOperations.cuh"
 #include "BinaryOperations.cuh"
+#include "BinaryIndexedOperations.cuh"
 
 template <typename MatrixType>
 class MatrixOperations {
@@ -36,6 +37,11 @@ public:
     static MatrixType reduceColumns(const MatrixType& matrix,
         BinaryOperation opA, UnaryOperation opB, float identity);
     static MatrixType sumColumns(const MatrixType& matrix);
+
+    template <typename BinaryIndexedOperation>
+    static MatrixType reduceColumnsIndexed(const MatrixType& matrix,
+        BinaryIndexedOperation op, IndexedValue identity);
+    static MatrixType minColumnsIndexed(const MatrixType& matrix);
 };
 
 #include "MatrixOperations.cut"
