@@ -1,0 +1,18 @@
+#ifndef _COUPLEDDICT_CUT_
+#define _COUPLEDDICT_CUT_
+
+template <typename MatrixType>
+MatrixType CoupledDict<MatrixType>::lookup(const MatrixType& instances) {
+    if (!initialized) {
+        throw std::invalid_argument("Invalid argument.");
+    } else {
+        MatrixType outMat;
+        outMat = MatrixOperations<MatrixType>::combineInnerProduct(dictLow, instances,
+            SquareDiff(), Add(), Identity(), 0.0f);
+        outMat = MatrixOperations<MatrixType>::minColumnsIndexed(outMat);
+        outMat = MatrixOperations<MatrixType>::index(dictHigh, outMat);
+        return outMat;
+    }
+}
+
+#endif
