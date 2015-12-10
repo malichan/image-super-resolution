@@ -1,14 +1,6 @@
 #ifndef _NEURALNET_CUT_
 #define _NEURALNET_CUT_
 
-class Sigmoid {
-public:
-    __host__ __device__
-    float operator()(float in) const {
-        return 1.0f / (1.0f + expf(-in));
-    }
-};
-
 template <typename MatrixType>
 MatrixType NeuralNet<MatrixType>::predict(const MatrixType& instances) {
     if (!initialized) {

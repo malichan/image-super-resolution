@@ -33,4 +33,165 @@ void MatrixOperations<DeviceMatrix>::transform(DeviceMatrix& matrix, UnaryOperat
     _transform<<<gridDim, blockDim>>>(matrix.getElements(), matrix.getHeight(), matrix.getWidth(), op);
 }
 
+template <typename MatrixType>
+void MatrixOperations<MatrixType>::fill(MatrixType& matrix, float value) {
+    transform(matrix, Fill(value));
+}
+
+template <typename MatrixType>
+void MatrixOperations<MatrixType>::negate(MatrixType& matrix) {
+    transform(matrix, Negate());
+}
+
+template <>
+template <typename BinaryOperation>
+HostMatrix MatrixOperations<HostMatrix>::combineElementWise(
+    const HostMatrix& matrixA, const HostMatrix& matrixB, BinaryOperation op) {
+    if (matrixA.getHeight() != matrixB.getHeight() || matrixA.getWidth() != matrixB.getWidth()) {
+        throw std::invalid_argument("Invalid argument.");
+    } else {
+        HostMatrix matrixC(matrixA.getHeight(), matrixA.getWidth());
+        for (unsigned int i = 0; i < matrixC.getHeight(); ++i) {
+            for (unsigned int j = 0; j < matrixC.getWidth(); ++j) {
+                matrixC.setElement(i, j, op(matrixA.getElement(i, j), matrixB.getElement(i, j)));
+            }
+        }
+        return matrixC;
+    }
+}
+
+template <typename BinaryOperation>
+__global__
+void _combineElementWise(const float* matrix_a, const float* matrix_b, float* matrix_c,
+    unsigned int m, unsigned int n, BinaryOperation op) {
+    unsigned int global_i = threadIdx.y + blockIdx.y * blockDim.y;
+    unsigned int global_j = threadIdx.x + blockIdx.x * blockDim.x;
+
+    if (global_i < m && global_j < n) {
+        matrix_c[global_i * n + global_j] =
+            op(matrix_a[global_i * n + global_j], matrix_b[global_i * n + global_j]);
+    }
+}
+
+template <>
+template <typename BinaryOperation>
+DeviceMatrix MatrixOperations<DeviceMatrix>::combineElementWise(
+    const DeviceMatrix& matrixA, const DeviceMatrix& matrixB, BinaryOperation op) {
+    if (matrixA.getHeight() != matrixB.getHeight() || matrixA.getWidth() != matrixB.getWidth()) {
+        throw std::invalid_argument("Invalid argument.");
+    } else {
+        const unsigned int BLOCK_SIZE = 32;
+
+        DeviceMatrix matrixC(matrixA.getHeight(), matrixA.getWidth());
+        dim3 blockDim(BLOCK_SIZE, BLOCK_SIZE);
+        dim3 gridDim((matrixC.getWidth() + BLOCK_SIZE - 1) / BLOCK_SIZE,
+            (matrixC.getHeight() + BLOCK_SIZE - 1) / BLOCK_SIZE);
+        _combineElementWise<<<gridDim, blockDim>>>(matrixA.getElements(), matrixB.getElements(),
+            matrixC.getElements(), matrixC.getHeight(), matrixC.getWidth(), op);
+        return matrixC;
+    }
+}
+
+template <typename MatrixType>
+MatrixType MatrixOperations<MatrixType>::add(const MatrixType& matrixA, const MatrixType& matrixB) {
+    return combineElementWise(matrixA, matrixB, Add());
+}
+
+template <>
+template <typename BinaryOperation1, typename BinaryOperation2, typename UnaryOperation>
+HostMatrix MatrixOperations<HostMatrix>::combineInnerProduct(
+    const HostMatrix& matrixA, const HostMatrix& matrixB,
+    BinaryOperation1 opA, BinaryOperation2 opB, UnaryOperation opC, float identity) {
+    if (matrixA.getWidth() != matrixB.getHeight()) {
+        throw std::invalid_argument("Invalid argument.");
+    } else {
+        HostMatrix matrixC(matrixA.getHeight(), matrixB.getWidth());
+        for (unsigned int i = 0; i < matrixC.getHeight(); ++i) {
+            for (unsigned int j = 0; j < matrixC.getWidth(); ++j) {
+                float value = identity;
+                for (unsigned int k = 0; k < matrixA.getWidth(); ++k) {
+                    value = opB(value, opA(matrixA.getElement(i, k), matrixB.getElement(k, j)));
+                }
+                matrixC.setElement(i, j, opC(value));
+            }
+        }
+        return matrixC;
+    }
+}
+
+template <typename BinaryOperation1, typename BinaryOperation2, typename UnaryOperation>
+__global__
+void _combineInnerProduct(const float* matrix_a, const float* matrix_b, float* matrix_c,
+    unsigned int m, unsigned int p, unsigned int n,
+    BinaryOperation1 op_a, BinaryOperation2 op_b, UnaryOperation op_c, float identity) {
+    __shared__ extern float shared_mem[];
+    float* s_a = shared_mem;
+    float* s_b = shared_mem + blockDim.x * blockDim.y;
+
+    unsigned int local_i = threadIdx.y;
+    unsigned int local_j = threadIdx.x;
+    unsigned int global_i = 0;
+    unsigned int global_j = 0;
+
+    unsigned int offset_i_a = blockIdx.y * blockDim.y;
+    unsigned int offset_j_a = 0;
+    unsigned int step_j_a = blockDim.x;
+    unsigned int offset_i_b = 0;
+    unsigned int offset_j_b = blockIdx.x * blockDim.x;
+    unsigned int step_i_b = blockDim.y;
+
+    unsigned int loop = (p + blockDim.x - 1) / blockDim.x;
+    float value = identity;
+    for (unsigned int l = 0; l < loop; ++l, offset_j_a += step_j_a, offset_i_b += step_i_b) {
+        global_i = offset_i_a + local_i;
+        global_j = offset_j_a + local_j;
+        s_a[local_i * blockDim.x + local_j] = (global_i < m && global_j < p)?
+            matrix_a[global_i * p + global_j]: identity;
+        global_i = offset_i_b + local_i;
+        global_j = offset_j_b + local_j;
+        s_b[local_i * blockDim.x + local_j] = (global_i < p && global_j < n)?
+            matrix_b[global_i * n + global_j]: identity;
+        __syncthreads();
+
+        for (unsigned int k = 0; k < blockDim.x; ++k) {
+            value = op_b(value, op_a(s_a[local_i * blockDim.x + k], s_b[k * blockDim.x + local_j]));
+        }
+        __syncthreads();
+    }
+
+    global_i = threadIdx.y + blockIdx.y * blockDim.y;
+    global_j = threadIdx.x + blockIdx.x * blockDim.x;
+    if (global_i < m && global_j < n) {
+        matrix_c[global_i * n + global_j] = op_c(value);
+    }
+}
+
+template <>
+template <typename BinaryOperation1, typename BinaryOperation2, typename UnaryOperation>
+DeviceMatrix MatrixOperations<DeviceMatrix>::combineInnerProduct(
+    const DeviceMatrix& matrixA, const DeviceMatrix& matrixB,
+    BinaryOperation1 opA, BinaryOperation2 opB, UnaryOperation opC, float identity) {
+    if (matrixA.getWidth() != matrixB.getHeight()) {
+        throw std::invalid_argument("Invalid argument.");
+    } else {
+        const unsigned int BLOCK_SIZE = 32;
+
+        DeviceMatrix matrixC(matrixA.getHeight(), matrixB.getWidth());
+        dim3 blockDim(BLOCK_SIZE, BLOCK_SIZE);
+        dim3 gridDim((matrixC.getWidth() + BLOCK_SIZE - 1) / BLOCK_SIZE,
+            (matrixC.getHeight() + BLOCK_SIZE - 1) / BLOCK_SIZE);
+        unsigned int sharedMem = BLOCK_SIZE * BLOCK_SIZE * sizeof(float) * 2;
+        _combineInnerProduct<<<gridDim, blockDim, sharedMem>>>(
+            matrixA.getElements(), matrixB.getElements(), matrixC.getElements(),
+            matrixC.getHeight(), matrixA.getWidth(), matrixC.getWidth(),
+            opA, opB, opC, identity);
+        return matrixC;
+    }
+}
+
+template <typename MatrixType>
+MatrixType MatrixOperations<MatrixType>::multiply(const MatrixType& matrixA, const MatrixType& matrixB) {
+    return combineInnerProduct(matrixA, matrixB, Multiply(), Add(), Identity(), 0.0f);
+}
+
 #endif

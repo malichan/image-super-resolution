@@ -1,108 +1,19 @@
 #include "MatrixOperations.cuh"
 
-class Fill {
-public:
-    float value;
-
-    Fill(float value): value(value) {}
-
-    __host__ __device__
-    float operator()(float in) const {
-        return value;
-    }
-};
-
 template <>
-void MatrixOperations<HostMatrix>::fill(HostMatrix& matrix, float value) {
-    transform(matrix, Fill(value));
+HostMatrix MatrixOperations<HostMatrix>::deepCopy(const HostMatrix& matrix) {
+    HostMatrix matrixCopy(matrix.getHeight(), matrix.getWidth());
+    size_t count = matrix.getHeight() * matrix.getWidth() * sizeof(float);
+    cudaMemcpy(matrixCopy.getElements(), matrix.getElements(), count, cudaMemcpyHostToHost);
+    return matrixCopy;
 }
 
 template <>
-void MatrixOperations<DeviceMatrix>::fill(DeviceMatrix& matrix, float value) {
-    transform(matrix, Fill(value));
-}
-
-template <>
-HostMatrix MatrixOperations<HostMatrix>::multiply(const HostMatrix& matrixA, const HostMatrix& matrixB) {
-    if (matrixA.getWidth() != matrixB.getHeight()) {
-        throw std::invalid_argument("Invalid argument.");
-    } else {
-        HostMatrix matrixC(matrixA.getHeight(), matrixB.getWidth());
-        for (unsigned int i = 0; i < matrixC.getHeight(); ++i) {
-            for (unsigned int j = 0; j < matrixC.getWidth(); ++j) {
-                float value = 0.0f;
-                for (unsigned int k = 0; k < matrixA.getWidth(); ++k) {
-                    value += matrixA.getElement(i, k) * matrixB.getElement(k, j);
-                }
-                matrixC.setElement(i, j, value);
-            }
-        }
-        return matrixC;
-    }
-}
-
-__global__
-void _multiply(const float* matrix_a, const float* matrix_b, float* matrix_c,
-    unsigned int m, unsigned int p, unsigned int n) {
-    __shared__ extern float shared_mem[];
-    float* s_a = shared_mem;
-    float* s_b = shared_mem + blockDim.x * blockDim.y;
-
-    unsigned int local_i = threadIdx.y;
-    unsigned int local_j = threadIdx.x;
-    unsigned int global_i = 0;
-    unsigned int global_j = 0;
-
-    unsigned int offset_i_a = blockIdx.y * blockDim.y;
-    unsigned int offset_j_a = 0;
-    unsigned int step_j_a = blockDim.x;
-    unsigned int offset_i_b = 0;
-    unsigned int offset_j_b = blockIdx.x * blockDim.x;
-    unsigned int step_i_b = blockDim.y;
-
-    unsigned int loop = (p + blockDim.x - 1) / blockDim.x;
-    float value = 0.0f;
-    for (unsigned int l = 0; l < loop; ++l, offset_j_a += step_j_a, offset_i_b += step_i_b) {
-        global_i = offset_i_a + local_i;
-        global_j = offset_j_a + local_j;
-        s_a[local_i * blockDim.x + local_j] = (global_i < m && global_j < p)?
-            matrix_a[global_i * p + global_j]: 0.0f;
-        global_i = offset_i_b + local_i;
-        global_j = offset_j_b + local_j;
-        s_b[local_i * blockDim.x + local_j] = (global_i < p && global_j < n)?
-            matrix_b[global_i * n + global_j]: 0.0f;
-        __syncthreads();
-
-        for (unsigned int k = 0; k < blockDim.x; ++k) {
-            value += s_a[local_i * blockDim.x + k] * s_b[k * blockDim.x + local_j];
-        }
-        __syncthreads();
-    }
-
-    global_i = threadIdx.y + blockIdx.y * blockDim.y;
-    global_j = threadIdx.x + blockIdx.x * blockDim.x;
-    if (global_i < m && global_j < n) {
-        matrix_c[global_i * n + global_j] = value;
-    }
-}
-
-template <>
-DeviceMatrix MatrixOperations<DeviceMatrix>::multiply(const DeviceMatrix& matrixA, const DeviceMatrix& matrixB) {
-    if (matrixA.getWidth() != matrixB.getHeight()) {
-        throw std::invalid_argument("Invalid argument.");
-    } else {
-        const unsigned int BLOCK_SIZE = 32;
-
-        DeviceMatrix matrixC(matrixA.getHeight(), matrixB.getWidth());
-        dim3 blockDim(BLOCK_SIZE, BLOCK_SIZE);
-        dim3 gridDim((matrixC.getWidth() + BLOCK_SIZE - 1) / BLOCK_SIZE,
-            (matrixC.getHeight() + BLOCK_SIZE - 1) / BLOCK_SIZE);
-        unsigned int sharedMem = BLOCK_SIZE * BLOCK_SIZE * sizeof(float) * 2;
-        _multiply<<<gridDim, blockDim, sharedMem>>>(matrixA.getElements(), matrixB.getElements(), matrixC.getElements(),
-            matrixC.getHeight(), matrixA.getWidth(), matrixC.getWidth());
-
-        return matrixC;
-    }
+DeviceMatrix MatrixOperations<DeviceMatrix>::deepCopy(const DeviceMatrix& matrix) {
+    DeviceMatrix matrixCopy(matrix.getHeight(), matrix.getWidth());
+    size_t count = matrix.getHeight() * matrix.getWidth() * sizeof(float);
+    cudaMemcpy(matrixCopy.getElements(), matrix.getElements(), count, cudaMemcpyDeviceToDevice);
+    return matrixCopy;
 }
 
 // template <>
