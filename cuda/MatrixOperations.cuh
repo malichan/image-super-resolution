@@ -32,6 +32,9 @@ public:
 
     static MatrixType concatenateRows(const MatrixType& matrixUpper, const MatrixType& matrixLower);
 
+    template <typename BinaryOperation, typename UnaryOperation>
+    static MatrixType reduceColumns(const MatrixType& matrix,
+        BinaryOperation opA, UnaryOperation opB, float identity);
     static MatrixType sumColumns(const MatrixType& matrix);
 };
 
