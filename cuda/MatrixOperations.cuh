@@ -42,6 +42,8 @@ public:
     static MatrixType reduceColumnsIndexed(const MatrixType& matrix,
         BinaryIndexedOperation op, IndexedValue identity);
     static MatrixType minColumnsIndexed(const MatrixType& matrix);
+
+    static MatrixType index(const MatrixType& matrix, const MatrixType& vector);
 };
 
 #include "MatrixOperations.cut"

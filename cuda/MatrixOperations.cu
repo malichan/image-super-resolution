@@ -158,3 +158,40 @@ DeviceMatrix MatrixOperations<DeviceMatrix>::concatenateRows(
         return matrixConcat;
     }
 }
+
+template <>
+HostMatrix MatrixOperations<HostMatrix>::index(const HostMatrix& matrix, const HostMatrix& vector) {
+    HostMatrix matrixIndexed(matrix.getHeight(), vector.getWidth());
+    for (unsigned int j = 0; j < matrixIndexed.getWidth(); ++j) {
+        unsigned int indexJ = (unsigned int)roundf(vector.getElement(0, j));
+        for (unsigned int i = 0; i < matrixIndexed.getHeight(); ++i) {
+            matrixIndexed.setElement(i, j, matrix.getElement(i, indexJ));            
+        }
+    }
+    return matrixIndexed;
+}
+
+__global__
+void _index(const float* matrix_in, const float* vector, float* matrix_out,
+    unsigned int m, unsigned int p, unsigned int n) {
+    unsigned int global_i = threadIdx.y + blockIdx.y * blockDim.y;
+    unsigned int global_j = threadIdx.x + blockIdx.x * blockDim.x;
+
+    if (global_i < m && global_j < n) {
+        unsigned int indexJ = (unsigned int)roundf(vector[global_j]);
+        matrix_out[global_i * n + global_j] = matrix_in[global_i * p + indexJ];
+    }
+}
+
+template <>
+DeviceMatrix MatrixOperations<DeviceMatrix>::index(const DeviceMatrix& matrix, const DeviceMatrix& vector) {
+    const unsigned int BLOCK_SIZE = 32;
+
+    DeviceMatrix matrixIndexed(matrix.getHeight(), vector.getWidth());
+    dim3 blockDim(BLOCK_SIZE, BLOCK_SIZE);
+    dim3 gridDim((matrixIndexed.getWidth() + BLOCK_SIZE - 1) / BLOCK_SIZE,
+        (matrixIndexed.getHeight() + BLOCK_SIZE - 1) / BLOCK_SIZE);
+    _index<<<gridDim, blockDim>>>(matrix.getElements(), vector.getElements(), matrixIndexed.getElements(),
+        matrix.getHeight(), matrix.getWidth(), vector.getWidth());
+    return matrixIndexed;
+}
