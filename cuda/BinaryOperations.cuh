@@ -11,6 +11,14 @@ public:
     }
 };
 
+class Subtract {
+public:
+    __host__ __device__
+    float operator()(float inA, float inB) const {
+        return inA - inB;
+    }
+};
+
 class Multiply {
 public:
     __host__ __device__

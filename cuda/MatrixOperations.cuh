@@ -41,6 +41,11 @@ public:
         BinaryIndexedOperation op, IndexedValue identity);
     static MatrixType minColumnsIndexed(const MatrixType& matrix);
 
+    template <typename BinaryOperation1, typename UnaryOperation, typename BinaryOperation2>
+    static void reduceTransformColumns(MatrixType& matrix,
+        BinaryOperation1 opA, UnaryOperation opB, BinaryOperation2 opC, float identity);
+    static void normalizeColumns(MatrixType& matrix);
+
     static MatrixType index(const MatrixType& matrix, const MatrixType& vector);
 };
 

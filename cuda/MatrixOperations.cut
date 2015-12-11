@@ -229,14 +229,13 @@ void _reduceColumns(const float* matrix, float* vector, unsigned int m, unsigned
             matrix[(local_i + offset_i) * n + global_j]: identity);
         offset_i += step_i;
     }
-    __syncthreads();
 
     for (step_i >>= 1; step_i > 0; step_i >>= 1) {
+        __syncthreads();
         if (local_i < step_i) {
             s[local_i * blockDim.x + local_j] = op_a(s[local_i * blockDim.x + local_j],
                 s[(local_i + step_i) * blockDim.x + local_j]);
         }
-        __syncthreads();
     }
 
     if (local_i == 0 && global_j < n) {
@@ -299,14 +298,13 @@ void _reduceColumnsIndexed(const float* matrix, float* vector, unsigned int m, u
             IndexedValue(matrix[(local_i + offset_i) * n + global_j], local_i + offset_i): identity);
         offset_i += step_i;
     }
-    __syncthreads();
 
     for (step_i >>= 1; step_i > 0; step_i >>= 1) {
+        __syncthreads();
         if (local_i < step_i) {
             s[local_i * blockDim.x + local_j] = op(s[local_i * blockDim.x + local_j],
                 s[(local_i + step_i) * blockDim.x + local_j]);
         }
-        __syncthreads();
     }
 
     if (local_i == 0 && global_j < n) {
@@ -333,6 +331,85 @@ template <typename MatrixType>
 MatrixType MatrixOperations<MatrixType>::minColumnsIndexed(const MatrixType& matrix) {
     return reduceColumnsIndexed(matrix, MinIndexed(),
         IndexedValue(std::numeric_limits<float>::max(), std::numeric_limits<unsigned int>::max()));
+}
+
+template <>
+template <typename BinaryOperation1, typename UnaryOperation, typename BinaryOperation2>
+void MatrixOperations<HostMatrix>::reduceTransformColumns(HostMatrix& matrix,
+    BinaryOperation1 opA, UnaryOperation opB, BinaryOperation2 opC, float identity) {
+    for (unsigned int j = 0; j < matrix.getWidth(); ++j) {
+        float value = identity;
+        for (unsigned int i = 0; i < matrix.getHeight(); ++i) {
+            value = opA(value, matrix.getElement(i, j));
+        }
+        value = opB(value);
+        for (unsigned int i = 0; i < matrix.getHeight(); ++i) {
+            matrix.setElement(i, j, opC(matrix.getElement(i, j), value));
+        }
+    }
+}
+
+template <typename BinaryOperation1, typename UnaryOperation, typename BinaryOperation2>
+__global__
+void _reduceTransformColumns(float* matrix, unsigned int m, unsigned int n,
+    BinaryOperation1 op_a, UnaryOperation op_b, BinaryOperation2 op_c, float identity) {
+    __shared__ extern float shared_mem_rtc[];
+    float* s = shared_mem_rtc;
+
+    unsigned int local_i = threadIdx.y;
+    unsigned int local_j = threadIdx.x;
+    unsigned int global_j = threadIdx.x + blockIdx.x * blockDim.x;
+    unsigned int offset_i = 0;
+    unsigned int step_i = blockDim.y;
+
+    s[local_i * blockDim.x + local_j] = identity;
+    while (offset_i < m) {
+        s[local_i * blockDim.x + local_j] = op_a(s[local_i * blockDim.x + local_j],
+            (local_i + offset_i < m && global_j < n)?
+            matrix[(local_i + offset_i) * n + global_j]: identity);
+        offset_i += step_i;
+    }
+
+    for (step_i >>= 1; step_i > 0; step_i >>= 1) {
+        __syncthreads();
+        if (local_i < step_i) {
+            s[local_i * blockDim.x + local_j] = op_a(s[local_i * blockDim.x + local_j],
+                s[(local_i + step_i) * blockDim.x + local_j]);
+        }
+    }
+
+    if (local_i == 0) {
+        s[local_j] = op_b(s[local_j]);
+    }
+    __syncthreads();
+
+    offset_i = 0;
+    step_i = blockDim.y;
+    while (offset_i < m) {
+        if (local_i + offset_i < m && global_j < n) {
+            matrix[(local_i + offset_i) * n + global_j] =
+                op_c(matrix[(local_i + offset_i) * n + global_j], s[local_j]);
+        }
+        offset_i += step_i;
+    }
+}
+
+template <>
+template <typename BinaryOperation1, typename UnaryOperation, typename BinaryOperation2>
+void MatrixOperations<DeviceMatrix>::reduceTransformColumns(DeviceMatrix& matrix,
+    BinaryOperation1 opA, UnaryOperation opB, BinaryOperation2 opC, float identity) {
+    const unsigned int BLOCK_SIZE = 32;
+
+    dim3 blockDim(BLOCK_SIZE, BLOCK_SIZE);
+    dim3 gridDim((matrix.getWidth() + BLOCK_SIZE - 1) / BLOCK_SIZE, 1);
+    unsigned int sharedMem = BLOCK_SIZE * BLOCK_SIZE * sizeof(float);
+    _reduceTransformColumns<<<gridDim, blockDim, sharedMem>>>(matrix.getElements(),
+        matrix.getHeight(), matrix.getWidth(), opA, opB, opC, identity);
+}
+
+template <typename MatrixType>
+void MatrixOperations<MatrixType>::normalizeColumns(MatrixType& matrix) {
+    reduceTransformColumns(matrix, Add(), DivideBy((float)matrix.getHeight()), Subtract(), 0.0f);
 }
 
 #endif

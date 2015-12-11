@@ -47,4 +47,16 @@ public:
     }
 };
 
+class DivideBy {
+public:
+    float value;
+
+    DivideBy(float value): value(value) {}
+
+    __host__ __device__
+    float operator()(float in) const {
+        return in / value;
+    }
+};
+
 #endif
