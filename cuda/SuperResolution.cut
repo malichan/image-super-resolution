@@ -1,0 +1,23 @@
+#ifndef _SUPERRESOLUTION_CUT_
+#define _SUPERRESOLUTION_CUT_
+
+template <typename MatrixType>
+SuperResolution<MatrixType>::SuperResolution() {
+    coupledDict.loadDicts("dict_high.txt", "dict_low.txt");
+    neuralNet.loadWeights("weights_in.txt", "weights_out.txt");
+}
+
+template <typename MatrixType>
+MatrixType SuperResolution<MatrixType>::scaleUp3x(const MatrixType& imageLow) const {
+    MatrixType patchesLow = decomposePatches(imageLow);
+    MatrixType patchesLowNorm = MatrixUtilities::copy<MatrixType>(patchesLow);
+    MatrixOperations<MatrixType>::normalizeColumns(patchesLowNorm);
+    MatrixType patchesHighNorm = coupledDict.lookup(patchesLowNorm);
+    MatrixType patchesCombined = MatrixOperations<MatrixType>::concatenateRows(patchesHighNorm, patchesLow);
+    MatrixType patchesHigh = neuralNet.predict(patchesCombined);
+    MatrixType imageHigh = reconstructPatches(patchesHigh);
+    globalOptimize(imageHigh, imageLow);
+    return imageHigh;
+}
+
+#endif
