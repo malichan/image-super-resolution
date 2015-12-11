@@ -16,60 +16,6 @@ DeviceMatrix MatrixOperations<DeviceMatrix>::deepCopy(const DeviceMatrix& matrix
     return matrixCopy;
 }
 
-// template <>
-// HostMatrix MatrixOperations<HostMatrix>::pad(const HostMatrix& matrix,
-//     unsigned int height, unsigned int width, unsigned int i, unsigned int j, float value) {
-//     if (height < matrix.getHeight() || width < matrix.getWidth()) {
-//         throw std::invalid_argument("Invalid argument.");
-//     } else {
-//         HostMatrix matrixPadded(height, width);
-//         unsigned int ii = i + matrix.getHeight();
-//         unsigned int jj = j + matrix.getWidth();
-//         for (unsigned int pi = 0; pi < height; ++pi) {
-//             for (unsigned int pj = 0; pj < width; ++pj) {
-//                 if (pi >= i && pi < ii && pj >= j && pj < jj) {
-//                     matrixPadded.setElement(pi, pj, matrix.getElement(pi - i, pj - j));
-//                 } else {
-//                     matrixPadded.setElement(pi, pj, value);
-//                 }
-//             }
-//         }
-//         return matrixPadded;
-//     }
-// }
-//
-// __global__
-// void _pad(const float* matrix_in, float* matrix_out, unsigned int m_in, unsigned int n_in,
-//     unsigned int m_out, unsigned int n_out, unsigned int i, unsigned int j, float value) {
-//     unsigned int global_i = threadIdx.y + blockIdx.y * blockDim.y;
-//     unsigned int global_j = threadIdx.x + blockIdx.x * blockDim.x;
-//
-//     if (global_i < m_out && global_j < n_out) {
-//         int global_i_in = global_i - i;
-//         int global_j_in = global_j - j;
-//         matrix_out[global_i * n_out + global_j] =
-//             (global_i_in >= 0 && global_i_in < m_in && global_j_in >= 0 && global_j_in < n_in)?
-//             matrix_in[global_i_in * n_in + global_j_in]: value;
-//     }
-// }
-//
-// template <>
-// DeviceMatrix MatrixOperations<DeviceMatrix>::pad(const DeviceMatrix& matrix,
-//     unsigned int height, unsigned int width, unsigned int i, unsigned int j, float value) {
-//     if (height < matrix.getHeight() || width < matrix.getWidth()) {
-//         throw std::invalid_argument("Invalid argument.");
-//     } else {
-//         const unsigned int BLOCK_SIZE = 32;
-//
-//         DeviceMatrix matrixPadded(height, width);
-//         dim3 blockDim(BLOCK_SIZE, BLOCK_SIZE);
-//         dim3 gridDim((width + BLOCK_SIZE - 1) / BLOCK_SIZE, (height + BLOCK_SIZE - 1) / BLOCK_SIZE);
-//         _pad<<<gridDim, blockDim>>>(matrix.getElements(), matrixPadded.getElements(),
-//             matrix.getHeight(), matrix.getWidth(), height, width, i, j, value);
-//         return matrixPadded;
-//     }
-// }
-
 template <>
 HostMatrix MatrixOperations<HostMatrix>::transpose(const HostMatrix& matrix) {
     HostMatrix matrixTranspose(matrix.getWidth(), matrix.getHeight());
@@ -102,6 +48,49 @@ DeviceMatrix MatrixOperations<DeviceMatrix>::transpose(const DeviceMatrix& matri
     _transpose<<<gridDim, blockDim>>>(matrix.getElements(), matrixTranspose.getElements(),
         matrixTranspose.getHeight(), matrixTranspose.getWidth());
     return matrixTranspose;
+}
+
+template <>
+HostMatrix MatrixOperations<HostMatrix>::padRowsTop(const HostMatrix& matrix,
+    unsigned int rows, float value) {
+    HostMatrix matrixPadded(rows + matrix.getHeight(), matrix.getWidth());
+    for (unsigned int i = 0; i < rows; ++i) {
+        for (unsigned int j = 0; j < matrixPadded.getWidth(); ++j) {
+            matrixPadded.setElement(i, j, value);
+        }
+    }
+    for (unsigned int i = 0; i < matrix.getHeight(); ++i) {
+        for (unsigned int j = 0; j < matrixPadded.getWidth(); ++j) {
+            matrixPadded.setElement(rows + i, j, matrix.getElement(i, j));
+        }
+    }
+    return matrixPadded;
+}
+
+__global__
+void _padRowsTop(const float* matrix_in, float* matrix_out, unsigned int m, unsigned int n,
+    unsigned int rows, float value) {
+    unsigned int global_i = threadIdx.y + blockIdx.y * blockDim.y;
+    unsigned int global_j = threadIdx.x + blockIdx.x * blockDim.x;
+
+    if (global_i < m && global_j < n) {
+        matrix_out[global_i * n + global_j] =
+            global_i >= rows? matrix_in[(global_i - rows) * n + global_j]: value;
+    }
+}
+
+template <>
+DeviceMatrix MatrixOperations<DeviceMatrix>::padRowsTop(const DeviceMatrix& matrix,
+    unsigned int rows, float value) {
+    const unsigned int BLOCK_SIZE = 32;
+
+    DeviceMatrix matrixPadded(rows + matrix.getHeight(), matrix.getWidth());
+    dim3 blockDim(BLOCK_SIZE, BLOCK_SIZE);
+    dim3 gridDim((matrixPadded.getWidth() + BLOCK_SIZE - 1) / BLOCK_SIZE,
+        (matrixPadded.getHeight() + BLOCK_SIZE - 1) / BLOCK_SIZE);
+    _padRowsTop<<<gridDim, blockDim>>>(matrix.getElements(), matrixPadded.getElements(),
+        matrixPadded.getHeight(), matrixPadded.getWidth(), rows, value);
+    return matrixPadded;
 }
 
 template <>

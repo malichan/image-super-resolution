@@ -26,11 +26,9 @@ public:
         BinaryOperation1 opA, BinaryOperation2 opB, UnaryOperation opC, float identity);
     static MatrixType multiply(const MatrixType& matrixA, const MatrixType& matrixB);
 
-    // static MatrixType pad(const MatrixType& matrix, unsigned int height, unsigned int width,
-    //     unsigned int i, unsigned int j, float value);
-
     static MatrixType transpose(const MatrixType& matrix);
 
+    static MatrixType padRowsTop(const MatrixType& matrix, unsigned int rows, float value);
     static MatrixType concatenateRows(const MatrixType& matrixUpper, const MatrixType& matrixLower);
 
     template <typename BinaryOperation, typename UnaryOperation>
