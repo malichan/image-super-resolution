@@ -20,7 +20,7 @@ for i = 1:npatch_v
         h_offset = (i - 1) * (patch_size - overlap_width);
         w_offset = (j - 1) * (patch_size - overlap_width);
         patch = reshape(patches(:, (i - 1) * npatch_h + j),...
-            [patch_size, patch_size]);
+            [patch_size, patch_size])';
         for h = 1:patch_size
             for w = 1:patch_size
                 hi = h_offset + h;

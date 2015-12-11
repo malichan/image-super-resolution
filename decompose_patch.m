@@ -26,7 +26,7 @@ for i = 1:npatch_v
         h_offset = (i - 1) * (patch_size - overlap_width);
         w_offset = (j - 1) * (patch_size - overlap_width);
         patch = image_padded(h_offset+1:h_offset+patch_size,...
-            w_offset+1:w_offset+patch_size);
+            w_offset+1:w_offset+patch_size)';
         patches(:, (i - 1) * npatch_h + j) = patch(:);
     end
 end
