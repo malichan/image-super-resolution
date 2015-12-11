@@ -15,7 +15,7 @@ MatrixType SuperResolution<MatrixType>::scaleUp3x(const MatrixType& imageLow) co
     MatrixType patchesHighNorm = coupledDict.lookup(patchesLowNorm);
     MatrixType patchesCombined = MatrixOperations<MatrixType>::concatenateRows(patchesHighNorm, patchesLow);
     MatrixType patchesHigh = neuralNet.predict(patchesCombined);
-    MatrixType imageHigh = reconstructPatches(patchesHigh);
+    MatrixType imageHigh = reconstructPatches(patchesHigh, /*imageLow.getHeight()*/59 * 3, /*imageLow.getWidth()*/57 * 3);
     globalOptimize(imageHigh, imageLow);
     return imageHigh;
 }

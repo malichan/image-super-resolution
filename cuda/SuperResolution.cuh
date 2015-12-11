@@ -16,7 +16,8 @@ private:
     NeuralNet<MatrixType> neuralNet;
 
     static MatrixType decomposePatches(const MatrixType& imageLow) {return imageLow;}
-    static MatrixType reconstructPatches(const MatrixType& patchesHigh) {return patchesHigh;}
+    static MatrixType reconstructPatches(const MatrixType& patchesHigh,
+        unsigned int height, unsigned int width);
     static void globalOptimize(MatrixType& imageHigh, const MatrixType& imageLow) {}
 };
 
