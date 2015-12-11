@@ -1,6 +1,16 @@
 #include "SuperResolution.cuh"
 
 template <>
+HostMatrix SuperResolution<HostMatrix>::decomposePatches(const HostMatrix& imageLow) {
+    return MatrixUtilities::loadFromFile("input_patches.txt");
+}
+
+template <>
+DeviceMatrix SuperResolution<DeviceMatrix>::decomposePatches(const DeviceMatrix& imageLow) {
+    return MatrixUtilities::copyToDevice(MatrixUtilities::loadFromFile("input_patches.txt"));
+}
+
+template <>
 HostMatrix SuperResolution<HostMatrix>::reconstructPatches(const HostMatrix& patchesHigh,
     unsigned int height, unsigned int width) {
     unsigned int patchesVertical = (height - 3 + 5) / 6;
@@ -74,4 +84,59 @@ DeviceMatrix SuperResolution<DeviceMatrix>::reconstructPatches(const DeviceMatri
 
     DeviceMatrix imageHigh = MatrixOperations<DeviceMatrix>::divide(sumMatrix, countMatrix);
     return imageHigh;
+}
+
+template <>
+void SuperResolution<HostMatrix>::globalOptimize(HostMatrix& imageHigh, const HostMatrix& imageLow) {
+    for (unsigned int i = 0; i < imageLow.getHeight(); ++i) {
+        for (unsigned int j = 0; j < imageLow.getWidth(); ++j) {
+            float valueLow = imageLow.getElement(i, j);
+            float valueHigh = 0.0f;
+            for (unsigned int pi = 0; pi < 3; ++pi) {
+                for (unsigned int pj = 0; pj < 3; ++pj) {
+                    valueHigh += imageHigh.getElement(i * 3 + pi, j * 3 + pj);
+                }
+            }
+            float diff = valueLow - valueHigh / 9.0f;
+            for (unsigned int pi = 0; pi < 3; ++pi) {
+                for (unsigned int pj = 0; pj < 3; ++pj) {
+                    imageHigh.setElement(i * 3 + pi, j * 3 + pj,
+                        imageHigh.getElement(i * 3 + pi, j * 3 + pj) + diff);
+                }
+            }
+        }
+    }
+}
+
+__global__
+void _globalOptimize(float* image_high, const float* image_low, unsigned int m, unsigned int n) {
+    unsigned int global_i = threadIdx.y + blockIdx.y * blockDim.y;
+    unsigned int global_j = threadIdx.x + blockIdx.x * blockDim.x;
+
+    if (global_i < m && global_j < n) {
+        float value_low = image_low[global_i * n + global_j];
+        float value_high = 0.0f;
+        for (unsigned int i = 0; i < 3; ++i) {
+            for (unsigned int j = 0; j < 3; ++j) {
+                value_high += image_high[(global_i * 3 + i) * (n * 3) + (global_j * 3 + j)];
+            }
+        }
+        float diff = value_low - value_high / 9.0f;
+        for (unsigned int i = 0; i < 3; ++i) {
+            for (unsigned int j = 0; j < 3; ++j) {
+                image_high[(global_i * 3 + i) * (n * 3) + (global_j * 3 + j)] += diff;
+            }
+        }
+    }
+}
+
+template <>
+void SuperResolution<DeviceMatrix>::globalOptimize(DeviceMatrix& imageHigh, const DeviceMatrix& imageLow) {
+    const unsigned int BLOCK_SIZE = 32;    
+
+    dim3 blockDim(BLOCK_SIZE, BLOCK_SIZE);
+    dim3 gridDim((imageLow.getWidth() + BLOCK_SIZE - 1) / BLOCK_SIZE,
+        (imageLow.getHeight() + BLOCK_SIZE - 1) / BLOCK_SIZE);
+    _globalOptimize<<<gridDim, blockDim>>>(imageHigh.getElements(), imageLow.getElements(),
+        imageLow.getHeight(), imageLow.getWidth());
 }

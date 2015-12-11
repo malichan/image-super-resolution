@@ -15,10 +15,10 @@ private:
     CoupledDict<MatrixType> coupledDict;
     NeuralNet<MatrixType> neuralNet;
 
-    static MatrixType decomposePatches(const MatrixType& imageLow) {return imageLow;}
+    static MatrixType decomposePatches(const MatrixType& imageLow);
     static MatrixType reconstructPatches(const MatrixType& patchesHigh,
         unsigned int height, unsigned int width);
-    static void globalOptimize(MatrixType& imageHigh, const MatrixType& imageLow) {}
+    static void globalOptimize(MatrixType& imageHigh, const MatrixType& imageLow);
 };
 
 #include "SuperResolution.cut"
