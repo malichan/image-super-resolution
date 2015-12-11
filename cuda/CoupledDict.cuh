@@ -10,7 +10,7 @@ public:
     CoupledDict(): dictHigh(), dictLow(), initialized(false) {}
 
     void loadDicts(const char* dictHighFileName, const char* dictLowFileName);
-    MatrixType lookup(const MatrixType& instances);
+    MatrixType lookup(const MatrixType& instances) const;
 
 private:
     MatrixType dictHigh;

@@ -10,7 +10,7 @@ public:
     NeuralNet(): weightsIn(), weightsOut(), initialized(false) {}
 
     void loadWeights(const char* weightsInFileName, const char* weightsOutFileName);
-    MatrixType predict(const MatrixType& instances);
+    MatrixType predict(const MatrixType& instances) const;
 
 private:
     MatrixType weightsIn;

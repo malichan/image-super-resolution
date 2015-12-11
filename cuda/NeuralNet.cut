@@ -2,7 +2,7 @@
 #define _NEURALNET_CUT_
 
 template <typename MatrixType>
-MatrixType NeuralNet<MatrixType>::predict(const MatrixType& instances) {
+MatrixType NeuralNet<MatrixType>::predict(const MatrixType& instances) const {
     if (!initialized) {
         throw std::invalid_argument("Invalid argument.");
     } else {

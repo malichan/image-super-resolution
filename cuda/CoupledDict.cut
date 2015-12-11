@@ -2,7 +2,7 @@
 #define _COUPLEDDICT_CUT_
 
 template <typename MatrixType>
-MatrixType CoupledDict<MatrixType>::lookup(const MatrixType& instances) {
+MatrixType CoupledDict<MatrixType>::lookup(const MatrixType& instances) const {
     if (!initialized) {
         throw std::invalid_argument("Invalid argument.");
     } else {
