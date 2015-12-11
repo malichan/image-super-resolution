@@ -18,6 +18,8 @@ public:
     static MatrixType combineElementWise(const MatrixType& matrixA, const MatrixType& matrixB,
         BinaryOperation op);
     static MatrixType add(const MatrixType& matrixA, const MatrixType& matrixB);
+    static MatrixType subtract(const MatrixType& matrixA, const MatrixType& matrixB);
+    static MatrixType divide(const MatrixType& matrixA, const MatrixType& matrixB);
 
     template <typename BinaryOperation1, typename BinaryOperation2, typename UnaryOperation>
     static MatrixType combineInnerProduct(const MatrixType& matrixA, const MatrixType& matrixB,

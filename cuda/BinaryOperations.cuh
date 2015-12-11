@@ -27,6 +27,14 @@ public:
     }
 };
 
+class Divide {
+public:
+    __host__ __device__
+    float operator()(float inA, float inB) const {
+        return inA / inB;
+    }
+};
+
 class SquareDiff {
 public:
     __host__ __device__

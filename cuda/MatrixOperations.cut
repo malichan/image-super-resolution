@@ -97,6 +97,16 @@ MatrixType MatrixOperations<MatrixType>::add(const MatrixType& matrixA, const Ma
     return combineElementWise(matrixA, matrixB, Add());
 }
 
+template <typename MatrixType>
+MatrixType MatrixOperations<MatrixType>::subtract(const MatrixType& matrixA, const MatrixType& matrixB) {
+    return combineElementWise(matrixA, matrixB, Subtract());
+}
+
+template <typename MatrixType>
+MatrixType MatrixOperations<MatrixType>::divide(const MatrixType& matrixA, const MatrixType& matrixB) {
+    return combineElementWise(matrixA, matrixB, Divide());
+}
+
 template <>
 template <typename BinaryOperation1, typename BinaryOperation2, typename UnaryOperation>
 HostMatrix MatrixOperations<HostMatrix>::combineInnerProduct(
