@@ -12,6 +12,9 @@ public:
 
     static HostMatrix copyToHost(const Matrix& matrix);
     static DeviceMatrix copyToDevice(const Matrix& matrix);
+
+    template <typename MatrixType>
+    static MatrixType copy(const MatrixType& matrix);
 };
 
 #endif

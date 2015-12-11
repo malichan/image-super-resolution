@@ -9,8 +9,6 @@
 template <typename MatrixType>
 class MatrixOperations {
 public:
-    static MatrixType deepCopy(const MatrixType& matrix);
-
     template <typename UnaryOperation>
     static void transform(MatrixType& matrix, UnaryOperation op);
     static void fill(MatrixType& matrix, float value);

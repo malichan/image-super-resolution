@@ -68,3 +68,19 @@ DeviceMatrix MatrixUtilities::copyToDevice(const Matrix& matrix) {
     cudaMemcpy(matrixCopy.getElements(), matrix.getElements(), count, kind);
     return matrixCopy;
 }
+
+template <>
+HostMatrix MatrixUtilities::copy<HostMatrix>(const HostMatrix& matrix) {
+    HostMatrix matrixCopy(matrix.getHeight(), matrix.getWidth());
+    size_t count = matrix.getHeight() * matrix.getWidth() * sizeof(float);
+    cudaMemcpy(matrixCopy.getElements(), matrix.getElements(), count, cudaMemcpyHostToHost);
+    return matrixCopy;
+}
+
+template <>
+DeviceMatrix MatrixUtilities::copy<DeviceMatrix>(const DeviceMatrix& matrix) {
+    DeviceMatrix matrixCopy(matrix.getHeight(), matrix.getWidth());
+    size_t count = matrix.getHeight() * matrix.getWidth() * sizeof(float);
+    cudaMemcpy(matrixCopy.getElements(), matrix.getElements(), count, cudaMemcpyDeviceToDevice);
+    return matrixCopy;
+}
