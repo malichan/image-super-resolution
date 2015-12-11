@@ -6,18 +6,14 @@ MatrixType NeuralNet<MatrixType>::predict(const MatrixType& instances) {
     if (!initialized) {
         throw std::invalid_argument("Invalid argument.");
     } else {
-        MatrixType rowVec, inMat, outMat;
+        MatrixType inMat, outMat;
 
-        rowVec = MatrixType(1, instances.getWidth());
-        MatrixOperations<MatrixType>::fill(rowVec, 1.0f);
-        inMat = MatrixOperations<MatrixType>::concatenateRows(rowVec, instances);
+        inMat = MatrixOperations<MatrixType>::padRowsTop(instances, 1, 1.0f);
         outMat = MatrixOperations<MatrixType>::combineInnerProduct(weightsIn, inMat,
             Multiply(), Add(), Sigmoid(), 0.0f);
-
-        rowVec = MatrixType(1, outMat.getWidth());
-        MatrixOperations<MatrixType>::fill(rowVec, 1.0f);
-        inMat = MatrixOperations<MatrixType>::concatenateRows(rowVec, outMat);
+        inMat = MatrixOperations<MatrixType>::padRowsTop(outMat, 1, 1.0f);
         outMat = MatrixOperations<MatrixType>::multiply(weightsOut, inMat);
+        
         return outMat;
     }
 }
