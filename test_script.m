@@ -98,7 +98,6 @@ end
 for i = 1:test_size
     image_test_high = images_high{indices_test(i)};
     image_test_low = images_low{indices_test(i)};
-    patches_test_high = decompose_patch(image_test_high, patch_size_hi, overlap_width_hi);
     patches_test_low = decompose_patch(image_test_low, patch_size, overlap_width);
     patches_test_low_norm = normalize_patch(patches_test_low);
     patches_test_high_tmp = lookup_dictionary(patches_test_low_norm, dict_high, dict_low);
@@ -115,3 +114,9 @@ for i = 1:test_size
     fprintf('Error of our proposed approach: %f\n', error_superres);
     pause;
 end
+
+%% save data
+fprint_matrix(dict_high, 'cuda/bin/dict_high.txt');
+fprint_matrix(dict_low, 'cuda/bin/dict_low.txt');
+fprint_matrix(weights_in', 'cuda/bin/weights_in.txt');
+fprint_matrix(weights_out', 'cuda/bin/weights_out.txt');
