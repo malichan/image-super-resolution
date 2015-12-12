@@ -23,8 +23,6 @@ void _transpose(const float* matrix_in, float* matrix_out, unsigned int m, unsig
 
 template <>
 DeviceMatrix MatrixOperations<DeviceMatrix>::transpose(const DeviceMatrix& matrix) {
-    const unsigned int BLOCK_SIZE = 32;
-
     DeviceMatrix matrixTranspose(matrix.getWidth(), matrix.getHeight());
     dim3 blockDim(BLOCK_SIZE, BLOCK_SIZE);
     dim3 gridDim((matrixTranspose.getWidth() + BLOCK_SIZE - 1) / BLOCK_SIZE,
@@ -66,8 +64,6 @@ void _padRowsTop(const float* matrix_in, float* matrix_out, unsigned int m, unsi
 template <>
 DeviceMatrix MatrixOperations<DeviceMatrix>::padRowsTop(const DeviceMatrix& matrix,
     unsigned int rows, float value) {
-    const unsigned int BLOCK_SIZE = 32;
-
     DeviceMatrix matrixPadded(rows + matrix.getHeight(), matrix.getWidth());
     dim3 blockDim(BLOCK_SIZE, BLOCK_SIZE);
     dim3 gridDim((matrixPadded.getWidth() + BLOCK_SIZE - 1) / BLOCK_SIZE,
@@ -120,8 +116,6 @@ DeviceMatrix MatrixOperations<DeviceMatrix>::concatenateRows(
     if (matrixUpper.getWidth() != matrixLower.getWidth()) {
         throw std::invalid_argument("Invalid argument.");
     } else {
-        const unsigned int BLOCK_SIZE = 32;
-
         DeviceMatrix matrixConcat(matrixUpper.getHeight() + matrixLower.getHeight(), matrixUpper.getWidth());
         dim3 blockDim(BLOCK_SIZE, BLOCK_SIZE);
         dim3 gridDim((matrixConcat.getWidth() + BLOCK_SIZE - 1) / BLOCK_SIZE,
@@ -158,8 +152,6 @@ void _index(const float* matrix_in, const float* vector, float* matrix_out,
 
 template <>
 DeviceMatrix MatrixOperations<DeviceMatrix>::index(const DeviceMatrix& matrix, const DeviceMatrix& vector) {
-    const unsigned int BLOCK_SIZE = 32;
-
     DeviceMatrix matrixIndexed(matrix.getHeight(), vector.getWidth());
     dim3 blockDim(BLOCK_SIZE, BLOCK_SIZE);
     dim3 gridDim((matrixIndexed.getWidth() + BLOCK_SIZE - 1) / BLOCK_SIZE,

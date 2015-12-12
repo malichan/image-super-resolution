@@ -10,4 +10,6 @@
 #include <memory>
 #include <limits>
 
+const unsigned int BLOCK_SIZE = 16;
+
 #endif

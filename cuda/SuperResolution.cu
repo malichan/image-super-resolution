@@ -63,9 +63,6 @@ void _decomposePatches(const float* image, float* patches,
 
 template <>
 DeviceMatrix SuperResolution<DeviceMatrix>::decomposePatches(const DeviceMatrix& imageLow) {
-    // return MatrixUtilities::copyToDevice(MatrixUtilities::loadFromFile("input_patches.txt"));
-    const unsigned int BLOCK_SIZE = 32;
-
     unsigned int patchesVertical = (imageLow.getHeight() - 1 + 1) / 2;
     unsigned int patchesHorizontal = (imageLow.getWidth() - 1 + 1) / 2;
 
@@ -137,8 +134,6 @@ void _reconstructPatches(const float* patches, float* sum, float* count,
 template <>
 DeviceMatrix SuperResolution<DeviceMatrix>::reconstructPatches(const DeviceMatrix& patchesHigh,
     unsigned int height, unsigned int width) {
-    const unsigned int BLOCK_SIZE = 32;
-
     unsigned int patchesHorizontal = (width - 3 + 5) / 6;
 
     DeviceMatrix sumMatrix(height, width);
@@ -203,8 +198,6 @@ void _globalOptimize(float* image_high, const float* image_low, unsigned int m, 
 
 template <>
 void SuperResolution<DeviceMatrix>::globalOptimize(DeviceMatrix& imageHigh, const DeviceMatrix& imageLow) {
-    const unsigned int BLOCK_SIZE = 32;    
-
     dim3 blockDim(BLOCK_SIZE, BLOCK_SIZE);
     dim3 gridDim((imageLow.getWidth() + BLOCK_SIZE - 1) / BLOCK_SIZE,
         (imageLow.getHeight() + BLOCK_SIZE - 1) / BLOCK_SIZE);

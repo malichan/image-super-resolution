@@ -25,8 +25,6 @@ void _transform(float* matrix, unsigned int m, unsigned int n, UnaryOperation op
 template <>
 template <typename UnaryOperation>
 void MatrixOperations<DeviceMatrix>::transform(DeviceMatrix& matrix, UnaryOperation op) {
-    const unsigned int BLOCK_SIZE = 32;
-
     dim3 blockDim(BLOCK_SIZE, BLOCK_SIZE);
     dim3 gridDim((matrix.getWidth() + BLOCK_SIZE - 1) / BLOCK_SIZE,
         (matrix.getHeight() + BLOCK_SIZE - 1) / BLOCK_SIZE);
@@ -80,8 +78,6 @@ DeviceMatrix MatrixOperations<DeviceMatrix>::combineElementWise(
     if (matrixA.getHeight() != matrixB.getHeight() || matrixA.getWidth() != matrixB.getWidth()) {
         throw std::invalid_argument("Invalid argument.");
     } else {
-        const unsigned int BLOCK_SIZE = 32;
-
         DeviceMatrix matrixC(matrixA.getHeight(), matrixA.getWidth());
         dim3 blockDim(BLOCK_SIZE, BLOCK_SIZE);
         dim3 gridDim((matrixC.getWidth() + BLOCK_SIZE - 1) / BLOCK_SIZE,
@@ -184,8 +180,6 @@ DeviceMatrix MatrixOperations<DeviceMatrix>::combineInnerProduct(
     if (matrixA.getWidth() != matrixB.getHeight()) {
         throw std::invalid_argument("Invalid argument.");
     } else {
-        const unsigned int BLOCK_SIZE = 32;
-
         DeviceMatrix matrixC(matrixA.getHeight(), matrixB.getWidth());
         dim3 blockDim(BLOCK_SIZE, BLOCK_SIZE);
         dim3 gridDim((matrixC.getWidth() + BLOCK_SIZE - 1) / BLOCK_SIZE,
@@ -257,8 +251,6 @@ template <>
 template <typename BinaryOperation, typename UnaryOperation>
 DeviceMatrix MatrixOperations<DeviceMatrix>::reduceColumns(const DeviceMatrix& matrix,
     BinaryOperation opA, UnaryOperation opB, float identity) {
-    const unsigned int BLOCK_SIZE = 32;
-
     DeviceMatrix vector(1, matrix.getWidth());
     dim3 blockDim(BLOCK_SIZE, BLOCK_SIZE);
     dim3 gridDim((matrix.getWidth() + BLOCK_SIZE - 1) / BLOCK_SIZE, 1);
@@ -326,8 +318,6 @@ template <>
 template <typename BinaryIndexedOperation>
 DeviceMatrix MatrixOperations<DeviceMatrix>::reduceColumnsIndexed(const DeviceMatrix& matrix,
     BinaryIndexedOperation op, IndexedValue identity) {
-    const unsigned int BLOCK_SIZE = 32;
-
     DeviceMatrix vector(1, matrix.getWidth());
     dim3 blockDim(BLOCK_SIZE, BLOCK_SIZE);
     dim3 gridDim((matrix.getWidth() + BLOCK_SIZE - 1) / BLOCK_SIZE, 1);
@@ -408,8 +398,6 @@ template <>
 template <typename BinaryOperation1, typename UnaryOperation, typename BinaryOperation2>
 void MatrixOperations<DeviceMatrix>::reduceTransformColumns(DeviceMatrix& matrix,
     BinaryOperation1 opA, UnaryOperation opB, BinaryOperation2 opC, float identity) {
-    const unsigned int BLOCK_SIZE = 32;
-
     dim3 blockDim(BLOCK_SIZE, BLOCK_SIZE);
     dim3 gridDim((matrix.getWidth() + BLOCK_SIZE - 1) / BLOCK_SIZE, 1);
     unsigned int sharedMem = BLOCK_SIZE * BLOCK_SIZE * sizeof(float);
