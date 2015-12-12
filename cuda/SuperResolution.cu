@@ -2,12 +2,83 @@
 
 template <>
 HostMatrix SuperResolution<HostMatrix>::decomposePatches(const HostMatrix& imageLow) {
-    return MatrixUtilities::loadFromFile("input_patches.txt");
+    unsigned int height = imageLow.getHeight();
+    unsigned int width = imageLow.getWidth();
+    unsigned int patchesVertical = (height - 1 + 1) / 2;
+    unsigned int patchesHorizontal = (width - 1 + 1) / 2;
+
+    HostMatrix patchesLow(9, patchesVertical * patchesHorizontal);
+
+    for (unsigned int pi = 0; pi < patchesVertical; ++pi) {
+        for (unsigned int pj = 0; pj < patchesHorizontal; ++pj) {
+            unsigned int pIndexJ = pi * patchesHorizontal + pj;
+            for (unsigned int i = 0; i < 3; ++i) {
+                unsigned int iIndexI = pi * 2 + i;
+                if (iIndexI >= height) {
+                    iIndexI = height * 2 - iIndexI - 1;
+                }
+                for (unsigned int j = 0; j < 3; ++j) {
+                    unsigned int pIndexI = i * 3 + j;
+                    unsigned int iIndexJ = pj * 2 + j;
+                    if (iIndexJ >= width) {
+                        iIndexJ = width * 2 - iIndexJ - 1;
+                    }
+                    patchesLow.setElement(pIndexI, pIndexJ, imageLow.getElement(iIndexI, iIndexJ));
+                }
+            }
+        }
+    }
+
+    return patchesLow;
+}
+
+__global__
+void _decomposePatches(const float* image, float* patches,
+    unsigned int m_image, unsigned int n_image, unsigned int n_patches,
+    unsigned int patches_v, unsigned int patches_h) {
+    unsigned int global_i = threadIdx.y + blockIdx.y * blockDim.y;
+    unsigned int global_j = threadIdx.x + blockIdx.x * blockDim.x;
+
+    if (global_i < patches_v && global_j < patches_h) {
+        unsigned int offset_i = global_i * 2;
+        unsigned int offset_j = global_j * 2;
+        unsigned int patches_j = global_i * patches_h + global_j;
+        for (unsigned int i = 0; i < 3; ++i) {
+            unsigned int image_i = offset_i + i;
+            if (image_i >= m_image) {
+                image_i = m_image * 2 - image_i - 1;
+            }
+            for (unsigned int j = 0; j < 3; ++j) {
+                unsigned int image_j = offset_j + j;
+                if (image_j >= n_image) {
+                    image_j = n_image * 2 - image_j - 1;
+                }
+                unsigned int patches_i = i * 3 + j;
+                patches[patches_i * n_patches + patches_j] = image[image_i * n_image + image_j];
+            }
+        }
+        
+    }
 }
 
 template <>
 DeviceMatrix SuperResolution<DeviceMatrix>::decomposePatches(const DeviceMatrix& imageLow) {
-    return MatrixUtilities::copyToDevice(MatrixUtilities::loadFromFile("input_patches.txt"));
+    // return MatrixUtilities::copyToDevice(MatrixUtilities::loadFromFile("input_patches.txt"));
+    const unsigned int BLOCK_SIZE = 32;
+
+    unsigned int patchesVertical = (imageLow.getHeight() - 1 + 1) / 2;
+    unsigned int patchesHorizontal = (imageLow.getWidth() - 1 + 1) / 2;
+
+    DeviceMatrix patchesLow(9, patchesVertical * patchesHorizontal);
+
+    dim3 blockDim(BLOCK_SIZE, BLOCK_SIZE);
+    dim3 gridDim((patchesHorizontal + BLOCK_SIZE - 1) / BLOCK_SIZE,
+        (patchesVertical + BLOCK_SIZE - 1) / BLOCK_SIZE);
+    _decomposePatches<<<gridDim, blockDim>>>(imageLow.getElements(), patchesLow.getElements(),
+        imageLow.getHeight(), imageLow.getWidth(), patchesLow.getWidth(),
+        patchesVertical, patchesHorizontal);
+
+    return patchesLow;
 }
 
 template <>
