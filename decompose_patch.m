@@ -14,10 +14,10 @@ width_padded = npatch_h * (patch_size - overlap_width) + overlap_width;
 image_padded = zeros(height_padded, width_padded);
 image_padded(1:height, 1:width) = image;
 for i = height+1:height_padded
-    image_padded(i, :) = image_padded(height * 2 - i, :);
+    image_padded(i, :) = image_padded(height * 2 - i + 1, :);
 end
 for j = width+1:width_padded
-    image_padded(:, j) = image_padded(:, width * 2 - j);
+    image_padded(:, j) = image_padded(:, width * 2 - j + 1);
 end
 
 patches = zeros(patch_size * patch_size, npatch_v * npatch_h);
