@@ -4,6 +4,8 @@ project(Super_Resolution_3x)
 include(ParallelUtils.cmake)
 enable_cuda_support()
 
+set(CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS} -std=c++11")
+
 set(CMAKE_BUILD_TYPE "Release")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -ffast-math")
 
