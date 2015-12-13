@@ -49,15 +49,16 @@ patches_train_low_norm = normalize_patch(patches_train_low);
 % end
 side = floor(sqrt(dict_size));
 dict_low_visualization = zeros(...
-    side * (patch_size + 1), side * (patch_size + 1));
+    side * (patch_size_hi + 1), side * (patch_size_hi + 1));
 for i = 1:side
     for j = 1:side
-        h_offset = (i - 1) * (patch_size + 1);
-        w_offset = (j - 1) * (patch_size + 1);
+        h_offset = (i - 1) * (patch_size_hi + 1);
+        w_offset = (j - 1) * (patch_size_hi + 1);
         patch = dict_low(:, (i - 1) * side + j) + 0.5;
         patch = reshape(patch, [patch_size patch_size])';
-        dict_low_visualization(h_offset+1:h_offset+patch_size,...
-            w_offset+1:w_offset+patch_size) = patch;
+        patch = imresize(patch, scale_factor, 'nearest');
+        dict_low_visualization(h_offset+1:h_offset+patch_size_hi,...
+            w_offset+1:w_offset+patch_size_hi) = patch;
     end
 end
 figure;
