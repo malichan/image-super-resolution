@@ -21,42 +21,58 @@ int main(int argc, char** argv) {
         if (option == 'c') {
             std::cout << "Scaling up the image on CPU ... " << std::endl;
 
+            unsigned int heightInput = 0;
+            unsigned int widthInput = 0;
+            unsigned int heightOutput = 0;
+            unsigned int widthOutput = 0;
             Timer timer;
             timer.start();
-
-            HostMatrix inputImage = Bitmap::loadFromFile(inputFileName);
-            SuperResolution<HostMatrix> sr;
-            HostMatrix outputImage = sr.scaleUp3x(inputImage);
-            Bitmap::saveToFile(outputImage, outputFileName);
-
+            {
+                HostMatrix inputImage = Bitmap::loadFromFile(inputFileName);
+                SuperResolution<HostMatrix> sr;
+                HostMatrix outputImage = sr.scaleUp3x(inputImage);
+                Bitmap::saveToFile(outputImage, outputFileName);
+                heightInput = inputImage.getHeight();
+                widthInput = inputImage.getWidth();
+                heightOutput = outputImage.getHeight();
+                widthOutput = outputImage.getWidth();
+            }
             float timeElapsed = timer.stop();
 
-            std::cout << "Input image size: " << inputImage.getHeight() << " x " <<
-                inputImage.getWidth() << std::endl;
-            std::cout << "Output image size: " << outputImage.getHeight() << " x " <<
-                outputImage.getWidth() << std::endl;
+            std::cout << "Input image size: " << heightInput << " x " <<
+                widthInput << std::endl;
+            std::cout << "Output image size: " << heightOutput << " x " <<
+                widthOutput << std::endl;
             std::cout << "Processing time: " << std::fixed << std::setprecision(3) <<
                 timeElapsed << " ms" << std::endl;
             return 0;
         } else if (option == 'g') {
             std::cout << "Scaling up the image on GPU ... " << std::endl;
 
+            unsigned int heightInput = 0;
+            unsigned int widthInput = 0;
+            unsigned int heightOutput = 0;
+            unsigned int widthOutput = 0;
             Timer timer;
             timer.start();
-
-            HostMatrix inputImage = Bitmap::loadFromFile(inputFileName);
-            DeviceMatrix dInputImage = MatrixUtilities::copyToDevice(inputImage);
-            SuperResolution<DeviceMatrix> sr;
-            DeviceMatrix dOutputImage = sr.scaleUp3x(dInputImage);
-            HostMatrix outputImage = MatrixUtilities::copyToHost(dOutputImage);
-            Bitmap::saveToFile(outputImage, outputFileName);
-
+            {
+                HostMatrix inputImage = Bitmap::loadFromFile(inputFileName);
+                DeviceMatrix dInputImage = MatrixUtilities::copyToDevice(inputImage);
+                SuperResolution<DeviceMatrix> sr;
+                DeviceMatrix dOutputImage = sr.scaleUp3x(dInputImage);
+                HostMatrix outputImage = MatrixUtilities::copyToHost(dOutputImage);
+                Bitmap::saveToFile(outputImage, outputFileName);
+                heightInput = inputImage.getHeight();
+                widthInput = inputImage.getWidth();
+                heightOutput = outputImage.getHeight();
+                widthOutput = outputImage.getWidth();
+            }
             float timeElapsed = timer.stop();
 
-            std::cout << "Input image size: " << inputImage.getHeight() << " x " <<
-                inputImage.getWidth() << std::endl;
-            std::cout << "Output image size: " << outputImage.getHeight() << " x " <<
-                outputImage.getWidth() << std::endl;
+            std::cout << "Input image size: " << heightInput << " x " <<
+                widthInput << std::endl;
+            std::cout << "Output image size: " << heightOutput << " x " <<
+                widthOutput << std::endl;
             std::cout << "Processing time: " << std::fixed << std::setprecision(3) <<
                 timeElapsed << " ms" << std::endl;
             return 0;
