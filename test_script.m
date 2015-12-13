@@ -1,7 +1,8 @@
 %% set parameters
-image_dir = 'dataset/flower'; 
-validation_ratio = 0.2;
+image_dir = 'dataset/flower';
 test_ratio = 0.2;
+train_patches = 50000;
+validation_patches = 10000;
 scale_factor = 3;
 patch_size = 3;
 overlap_width = 1;
@@ -9,14 +10,13 @@ dict_size = 1024;
 hidden_units = 81;
 rand_range = 0.01;
 learning_rate = 0.1;
-max_epochs = 500;
+max_epochs = 1000;
 
 %% other parameters
 image_files = dir(fullfile(image_dir, '*.bmp'));
 num_images = size(image_files, 1);
-validation_size = round(num_images * validation_ratio);
 test_size = round(num_images * test_ratio);
-train_size = num_images - validation_size - test_size;
+train_size = num_images - test_size;
 patch_size_hi = scale_factor * patch_size;
 overlap_width_hi = scale_factor * overlap_width;
 input_units = patch_size * patch_size + patch_size_hi * patch_size_hi;
@@ -33,27 +33,32 @@ end
 %% partition datasets
 indices_perm = randperm(num_images);
 indices_train = indices_perm(1:train_size);
-indices_validation = indices_perm(train_size+1:num_images-test_size);
 indices_test = indices_perm(num_images-test_size+1:end);
 
 %% decompose into patches
-patches_train_high = zeros(patch_size_hi * patch_size_hi, 0);
-patches_train_low = zeros(patch_size * patch_size, 0);
-for i = 1:train_size
-    patches_train_high = [patches_train_high,...
-        decompose_patch(images_high{indices_train(i)}, patch_size_hi, overlap_width_hi)];
-    patches_train_low = [patches_train_low,...
-        decompose_patch(images_low{indices_train(i)}, patch_size, overlap_width)];
-end
-
-patches_validation_high = zeros(patch_size_hi * patch_size_hi, 0);
-patches_validation_low = zeros(patch_size * patch_size, 0);
-for i = 1:validation_size
-    patches_validation_high = [patches_validation_high,...
-        decompose_patch(images_high{indices_validation(i)}, patch_size_hi, overlap_width_hi)];
-    patches_validation_low = [patches_validation_low,...
-        decompose_patch(images_low{indices_validation(i)}, patch_size, overlap_width)];
-end
+% patches_train_high = zeros(patch_size_hi * patch_size_hi, 0);
+% patches_train_low = zeros(patch_size * patch_size, 0);
+% for i = 1:train_size
+%     patches_train_high = [patches_train_high,...
+%         decompose_patch(images_high{indices_train(i)}, patch_size_hi, overlap_width_hi)];
+%     patches_train_low = [patches_train_low,...
+%         decompose_patch(images_low{indices_train(i)}, patch_size, overlap_width)];
+% end
+% 
+% patches_validation_high = zeros(patch_size_hi * patch_size_hi, 0);
+% patches_validation_low = zeros(patch_size * patch_size, 0);
+% for i = 1:validation_size
+%     patches_validation_high = [patches_validation_high,...
+%         decompose_patch(images_high{indices_validation(i)}, patch_size_hi, overlap_width_hi)];
+%     patches_validation_low = [patches_validation_low,...
+%         decompose_patch(images_low{indices_validation(i)}, patch_size, overlap_width)];
+% end
+[patches_train_high, patches_train_low] = sample_patch_pair(...
+    images_high(indices_train), images_low(indices_train),...
+    patch_size, scale_factor, train_patches);
+[patches_validation_high, patches_validation_low] = sample_patch_pair(...
+    images_high(indices_train), images_low(indices_train),...
+    patch_size, scale_factor, validation_patches);
 
 %% normalize patches
 patches_train_high_norm = normalize_patch(patches_train_high);
