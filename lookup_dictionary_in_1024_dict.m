@@ -10,7 +10,6 @@ function [ patches_high ] = lookup_dictionary(...
 patches_high = zeros(81, patch_size);
 
 pre_part = pinv(dict_low' * dict_low) * dict_low';
-size(pre_part)
 for col = 1 : patch_size
     weight = pre_part * patches_low(:,col);
     patches_high(:,col) = dict_high * weight;
