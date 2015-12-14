@@ -31,22 +31,6 @@ patches_train_low_norm = normalize_patch(patches_train_low);
     patches_train_high_norm, patches_train_low_norm, dict_size);
 
 %% visualize the seeds of kmeans in low dictionary
-% visualize_row = 10;
-% visualize_col = 20;
-% visualize_size = visualize_row * visualize_col;
-% min_value = min(min(dict_low));
-% max_value = max(max(dict_low));
-% for i = 1 : visualize_size
-%     seed = dict_low(:,i);
-%     seed = reshape(seed, [patch_size, patch_size])' + 0.5;
-%    for row = 1 : patch_size
-%       for col = 1 : patch_size
-%          seed(row ,col) = (seed(row, col) - min_value) / (max_value - min_value) * 255 ;
-%       end
-%    end
-%     subplot(visualize_row, visualize_col, i);
-%     imshow(seed);
-% end
 side = floor(sqrt(dict_size));
 dict_low_visualization = zeros(...
     side * (patch_size_hi + 1), side * (patch_size_hi + 1));
@@ -65,23 +49,6 @@ figure;
 imshow(dict_low_visualization);
 
 %% visualize the seeds of kmeans in high dictionary
-% visualize_row = 5;
-% visualize_col = 10;
-% visualize_size = visualize_row * visualize_col;
-% min_value = min(min(dict_high));
-% max_value = max(max(dict_high));
-% figure
-% for i = 1 : visualize_size
-%     seed = dict_high(:,i);
-%     seed = reshape(seed, [patch_size_hi, patch_size_hi]);
-%    for row = 1 : patch_size_hi
-%       for col = 1 : patch_size_hi
-%          seed(row ,col) = (seed(row, col) - min_value) / (max_value - min_value) * 255 ;
-%       end
-%    end
-%     subplot(visualize_row, visualize_col, i);
-%     imshow(seed);
-% end
 side = floor(sqrt(dict_size));
 dict_high_visualization = zeros(...
     side * (patch_size_hi + 1), side * (patch_size_hi + 1));
