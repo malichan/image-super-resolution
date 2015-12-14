@@ -55,4 +55,4 @@ title('Coupled Dictionary Learning Curve');
 xlabel('Training-set Size');
 ylabel('Test-set Mean Squared Error');
 xlim([0, 60000]);
-% ylim([0.15, 0.3]);
+ylim([0.15, 0.3]);
