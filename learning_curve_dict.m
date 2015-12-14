@@ -2,7 +2,7 @@
 image_dir = 'dataset/flower';
 test_ratio = 0.2;
 train_patches = 50000;
-test_patches = 2000;
+test_patches = 200;
 scale_factor = 3;
 patch_size = 3;
 overlap_width = 1;
@@ -74,6 +74,9 @@ for i = 1 : length(training_set_size_list)
     
     sum_error = 0;
     for t = 1 : times
+        
+        fprintf('begin %d %d \n',training_set_size, t);
+        
         ran = randperm( train_patches);
         for c = 1 : training_set_size
             current_patches_train_high(:,c) = patches_train_high_norm(:,ran(c));
@@ -92,9 +95,13 @@ for i = 1 : length(training_set_size_list)
             test_idx(c) = 0;
             small = 100000;
             test_patch_low = patches_test_low_norm(:,c);
+            
             for d = 1 : dict_size
-               cur_error = mse( test_patch_low, dict_low(:,d));
-               fprintf('%d %d in first\n',c,d);
+               %cur_error = mse( test_patch_low, dict_low(:,d));
+               cur_error = 0;
+               for j = 1 : 9
+                  cur_error = cur_error + (test_patch_low(j) - dict_low(j,d)).^ 2; 
+               end
                if cur_error < small
                    small = cur_error;
                    test_idx(c) = d;
@@ -102,8 +109,9 @@ for i = 1 : length(training_set_size_list)
             end
         end
         
+        fprintf('end %d %d \n',training_set_size, t);
+        
         for c = 1 : test_patches
-            fprintf('%d in second\n',c);
             test_patch_high = patches_test_high_norm(:,c);
             sum_error =  sum_error + mse(test_patch_high, dict_high(test_idx(c)) );
         end
