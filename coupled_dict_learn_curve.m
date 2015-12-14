@@ -1,6 +1,5 @@
 %% set parameters
 image_dir = 'dataset/flower';
-test_ratio = 0.2;
 scale_factor = 3;
 patch_size = 3;
 dict_size = 1024;
