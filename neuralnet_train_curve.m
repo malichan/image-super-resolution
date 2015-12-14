@@ -76,7 +76,7 @@ xlabel('Training Epochs');
 ylabel('Mean Squared Error');
 legend('Training-set', 'Validation-set');
 ylim([0.1, 0.3]);
-% xlim([0, 500]);
+xlim([0, 500]);
 for i = 1:max_epochs
     if i > 1 && errors_validation(i) > errors_validation(i - 1)
         break;
