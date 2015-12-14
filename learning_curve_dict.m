@@ -83,7 +83,7 @@ for i = 1 : length(training_set_size_list)
             current_patches_train_low(:,c) = patches_train_low_norm(:,ran(c));
         end
         
-        [idx, dict_low] = kmeans(current_patches_train_low', dict_size, 'Display', 'iter', 'MaxIter', 200);
+        [idx, dict_low] = kmeans(current_patches_train_low', dict_size, 'MaxIter', 200);
         dict_low = dict_low';
         dict_high = zeros(size(current_patches_train_high, 1), dict_size);
         for c = 1:dict_size
@@ -109,15 +109,20 @@ for i = 1 : length(training_set_size_list)
             end
         end
         
-        fprintf('end %d %d \n',training_set_size, t);
         
         for c = 1 : test_patches
             test_patch_high = patches_test_high_norm(:,c);
-            sum_error =  sum_error + mse(test_patch_high, dict_high(test_idx(c)) );
+            current_error = 0;
+            for j = 1 : 81
+                current_error = current_error + ( test_patch_high(j) - dict_high(j, test_idx(c)) ).^ 2;
+            end
+            sum_error =  sum_error + current_error;
         end
         
     end
-    sum_error = sum_error / times;
+    fprintf('sum error is %d\n', sum_error);
+    sum_error = sum_error / (81 * times * training_set_size );
+    fprintf('sum error is %d\n', sum_error);
     squared_error(i) = sum_error;
 end
 
