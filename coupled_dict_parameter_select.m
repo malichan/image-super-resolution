@@ -57,4 +57,4 @@ title('Coupled Dictionary Parameter Selection');
 xlabel('Coupled Dictionary Size');
 ylabel('Cross-Validation Mean Squared Error');
 xlim([0, 2200]);
-ylim([0.2, 0.3]);
+ylim([0.05, 0.35]);

@@ -9,6 +9,7 @@ hidden_units = 81;
 rand_range = 0.01;
 learning_rate = 0.2;
 max_epochs = 500;
+train_patches_dict = 10000;
 
 %% other parameters
 image_files = dir(fullfile(image_dir, '*.bmp'));
@@ -25,6 +26,14 @@ for i = 1:num_images
     [images_high{i}, images_low{i}] = down_scale(image, scale_factor);
 end
 
+%% construct coupled dictionary
+[patches_dict_high, patches_dict_low] = sample_patch_pair(...
+    images_high, images_low, patch_size, scale_factor, train_patches_dict);
+patches_dict_high = normalize_patch(patches_dict_high);
+patches_dict_low = normalize_patch(patches_dict_low);
+[dict_high, dict_low] = build_dictionary(...
+    patches_dict_high, patches_dict_low, dict_size);
+
 %% sample patches
 [patches_train_high, patches_train_low] = sample_patch_pair(...
     images_high, images_low, patch_size, scale_factor, train_patches);
@@ -37,11 +46,6 @@ patches_train_low_norm = normalize_patch(patches_train_low);
 
 patches_validation_high_norm = normalize_patch(patches_validation_high);
 patches_validation_low_norm = normalize_patch(patches_validation_low);
-
-%% construct coupled dictionary
-[dict_high, dict_low] = build_dictionary(...
-    [patches_train_high_norm, patches_validation_high_norm],...
-    [patches_train_low_norm, patches_validation_low_norm], dict_size);
 
 %% lookup in coupled dictionary
 patches_train_high_tmp = lookup_dictionary(patches_train_low_norm, dict_high, dict_low);
@@ -75,7 +79,7 @@ title('Neural Network Training Curve');
 xlabel('Training Epochs');
 ylabel('Mean Squared Error');
 legend('Training-set', 'Validation-set');
-ylim([0.1, 0.3]);
+ylim([0.05, 0.35]);
 xlim([0, 500]);
 for i = 1:max_epochs
     if i > 1 && errors_validation(i) > errors_validation(i - 1)
