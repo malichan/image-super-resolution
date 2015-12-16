@@ -7,7 +7,7 @@ patch_size = 3;
 dict_size = 1024;
 hidden_units = 81;
 rand_range = 0.01;
-learning_rate = 0.2;
+learning_rate = 0.1;
 max_epochs = 500;
 train_patches_dict = 10000;
 
