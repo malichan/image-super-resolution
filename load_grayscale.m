@@ -4,7 +4,9 @@ function [ image ] = load_grayscale( file_name )
 % Output: image - image matrix
 
 image = imread(file_name);
-image = rgb2gray(image);
+if size(image, 3) ~= 1
+    image = rgb2gray(image);
+end
 image = double(image) / 255;
 
 end
