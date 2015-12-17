@@ -15,7 +15,6 @@ high_dimension = 81;
 patches_high = zeros(high_dimension, patch_number);
 
 for i = 1 : patch_number
-    fprintf('%d\n', i);
     patch = patches_low(:,i);
     current_idx = idx(i,:);
     current_subdict = dict_low(:,current_idx);
