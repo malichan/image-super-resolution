@@ -6,12 +6,12 @@ function [ patches_high ] = lookup_dictionary_in_LLC(...
 %         dict_low - low resolution dictionary
 % Output: patches_high - list of high resolution patches
 
-k_value = 10;
+k_value = 5;
 
 idx = knnsearch(dict_low', patches_low', 'K', k_value);
 
-[low_dimension, patch_number] = size(patches_low);
-high_dimension = 81;
+patch_number = size(patches_low, 2);
+high_dimension = size(dict_high, 1);
 patches_high = zeros(high_dimension, patch_number);
 
 for i = 1 : patch_number
@@ -21,7 +21,7 @@ for i = 1 : patch_number
     % solve LLC
     % X w = b
     % subdict * w = patch
-    w = pinv(current_subdict' * current_subdict) * current_subdict' * patch;
+    w = current_subdict \ patch;
     
     patches_high(:,i) = dict_high(:, current_idx) * w;
 end

@@ -7,8 +7,8 @@ function [ patches_high] = lookup_dictionary_in_sparse_coding(...
 % Output: patches_high - list of high resolution patches
 
 lam = 0.01;
-[low_dimension, patch_number] = size(patches_low);
-high_dimension = 81;
+patch_number = size(patches_low, 2);
+high_dimension = size(dict_high, 1);
 patches_high = zeros(high_dimension, patch_number);
 
 for i = 1 : patch_number
