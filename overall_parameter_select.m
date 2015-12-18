@@ -125,20 +125,15 @@ average = mean(error, 3);
 stddev = std(error, 0, 3);
 
 figure;
-bar(0:4, average(4,:), 0.5, 'FaceColor', [0.8, 0.8, 0.8]);
-hold on;
-errorbar(0:4, average(4,:), stddev(4,:), '.');
+errorbar(0:4, average(4,:), stddev(4,:));
 title('Overall Parameter Selection (Patch Size = 5)');
 xlabel('Overlap Width');
 ylabel('Cross Validation Mean Squared Error');
 ylim([0.0, 0.0025]);
 
 figure;
-bar(2:5, [average(1,2),average(2,3),average(3,4),average(4,5)],...
-    0.5, 'FaceColor', [0.8, 0.8, 0.8]);
-hold on;
 errorbar(2:5, [average(1,2),average(2,3),average(3,4),average(4,5)],...
-    [stddev(1,2),stddev(2,3),stddev(3,4),stddev(4,5)], '.');
+    [stddev(1,2),stddev(2,3),stddev(3,4),stddev(4,5)]);
 title('Overall Parameter Selection (Overlap Width = Patch Size - 1)');
 xlabel('Patch Size');
 ylabel('Cross Validation Mean Squared Error');
