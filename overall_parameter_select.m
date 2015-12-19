@@ -129,6 +129,7 @@ errorbar(0:4, average(4,:), stddev(4,:));
 title('Overall Parameter Selection (Patch Size = 5)');
 xlabel('Overlap Width');
 ylabel('Cross Validation Mean Squared Error');
+set(gca,'XTick', 0:1:4);
 ylim([0.0, 0.0025]);
 
 figure;
@@ -137,4 +138,5 @@ errorbar(2:5, [average(1,2),average(2,3),average(3,4),average(4,5)],...
 title('Overall Parameter Selection (Overlap Width = Patch Size - 1)');
 xlabel('Patch Size');
 ylabel('Cross Validation Mean Squared Error');
+set(gca,'XTick', 2:1:5);
 ylim([0.0, 0.0025]);
