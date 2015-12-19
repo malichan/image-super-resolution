@@ -4,7 +4,7 @@ HostMatrix Bitmap::loadFromFile(const char* fileName) {
     std::ifstream fin;
     fin.open(fileName);
     if (!fin.is_open()) {
-        std::cerr << "Could not open the input image." << std::endl;
+        std::cerr << "Could not open " << fileName << "." << std::endl;
         exit(EXIT_FAILURE);
     }
 
@@ -86,6 +86,10 @@ HostMatrix Bitmap::loadFromFile(const char* fileName) {
 void Bitmap::saveToFile(const HostMatrix& image, const char* fileName) {
     std::ofstream fout;
     fout.open(fileName);
+    if (!fout.is_open()) {
+        std::cerr << "Could not open " << fileName << "." << std::endl;
+        exit(EXIT_FAILURE);
+    }
 
     unsigned int height = image.getHeight();
     unsigned int width = image.getWidth();

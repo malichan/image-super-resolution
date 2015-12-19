@@ -3,6 +3,10 @@
 HostMatrix MatrixUtilities::loadFromFile(const char* fileName) {
     std::ifstream fin;
     fin.open(fileName);
+    if (!fin.is_open()) {
+        std::cerr << "Could not open " << fileName << "." << std::endl;
+        exit(EXIT_FAILURE);
+    }
 
     unsigned int height = 0;
     unsigned int width = 0;
@@ -24,6 +28,10 @@ HostMatrix MatrixUtilities::loadFromFile(const char* fileName) {
 void MatrixUtilities::saveToFile(const HostMatrix& matrix, const char* fileName) {
     std::ofstream fout;
     fout.open(fileName);
+    if (!fout.is_open()) {
+        std::cerr << "Could not open " << fileName << "." << std::endl;
+        exit(EXIT_FAILURE);
+    }
 
     fout.setf(std::ios::fixed, std::ios::floatfield);
     fout.precision(6);
